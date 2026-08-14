@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HelpDesk - Admin Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0b1120; --bg-sidebar: #10192b; --bg-card: #151e30;
+            --bg-input: #1c273f; --text-main: #ffffff; --text-muted: #8b9bb5;
+            --accent-blue: #3b82f6; --accent-green: #10b981; --accent-orange: #f59e0b;
+            --accent-red: #ef4444; --border-color: #26334d; --radius: 12px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg-dark); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
+        ::-webkit-scrollbar { width: 8px; } ::-webkit-scrollbar-track { background: var(--bg-dark); } ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+
+        /* Sidebar */
+        .sidebar { width: 240px; background-color: var(--bg-sidebar); display: flex; flex-direction: column; padding: 20px; border-right: 1px solid var(--border-color); flex-shrink: 0; }
+        .logo { display: flex; align-items: center; gap: 12px; margin-bottom: 40px; }
+        .logo i { font-size: 32px; color: var(--accent-blue); } .logo h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.5px; }
+        .nav-menu { display: flex; flex-direction: column; gap: 4px; flex-grow: 1; }
+        .nav-item { display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 8px; color: var(--text-muted); text-decoration: none; cursor: pointer; transition: all 0.2s; font-size: 14px; }
+        .nav-item:hover { background-color: rgba(255,255,255,0.05); color: #fff; }
+        .nav-item.active { background-color: var(--accent-blue); color: white; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4); }
+        .nav-item i { width: 20px; text-align: center; }
+
+        /* Main */
+        .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .header { height: 70px; background-color: var(--bg-sidebar); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; padding: 0 30px; flex-shrink: 0; }
+        .header-left { display: flex; align-items: center; gap: 15px; } .header-left h2 { font-size: 18px; font-weight: 500; }
+        .header-right { display: flex; align-items: center; gap: 20px; }
+        .search-box { background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 16px; display: flex; align-items: center; gap: 10px; color: var(--text-muted); width: 250px; }
+        .search-box input { background: transparent; border: none; outline: none; color: #fff; width: 100%; font-size: 13px; }
+        
+        .content-area { padding: 24px 30px; overflow-y: auto; flex-grow: 1; }
+        
+        /* UI Elements */
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: var(--bg-card); padding: 20px; border-radius: var(--radius); border: 1px solid var(--border-color); }
+        .stat-card h3 { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
+        .stat-card .number { font-size: 28px; font-weight: 600; }
+        
+        .table-container { background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border-color); padding: 20px; }
+        .table-header { display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center; }
+        .table-header h3 { font-size: 16px; font-weight: 500; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th { text-align: left; color: var(--text-muted); font-weight: 500; padding: 12px 0; border-bottom: 1px solid var(--border-color); }
+        td { padding: 16px 0; border-bottom: 1px solid var(--border-color); color: #ddd; }
+        
+        .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .status-badge.open { background: rgba(59, 130, 246, 0.2); color: var(--accent-blue); }
+        .status-badge.in-progress { background: rgba(245, 158, 11, 0.2); color: var(--accent-orange); }
+        .status-badge.closed { background: rgba(26, 197, 26, 0.2); color: var(--accent-green); }
+        
+        .btn { padding: 8px 16px; border-radius: 8px; border: none; font-weight: 500; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+        .btn-primary { background: var(--accent-blue); color: #fff; } .btn-primary:hover { background: #2563eb; } 
+        .btn-success { background: var(--accent-green); color: #fff; } .btn-danger { background: var(--accent-red); color: #fff; }
+        .btn-outline { background: transparent; border: 1px solid var(--border-color); color: var(--accent-red); }
+        
+        .row { display: flex; gap: 20px; flex-wrap: wrap; } .col-50 { flex: 1; min-width: 300px; }
+        .mt-20 { margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="logo"> <i class="fas fa-headset"></i> <h1>HelpDesk</h1> </div>
+        <nav class="nav-menu">
+            <a href="#" class="nav-item active"><i class="fas fa-house"></i> Dashboard</a>
+            <a href="#" class="nav-item"><i class="fas fa-ticket"></i> Tickets</a>
+            <a href="#" class="nav-item"><i class="fas fa-users"></i> Users</a>
+            <a href="#" class="nav-item"><i class="fas fa-user-tie"></i> Technicians</a>
+            <a href="#" class="nav-item"><i class="fas fa-chart-pie"></i> Reports</a>
+        </nav>
+    </aside>
+
+    <!-- Main -->
+    <main class="main-content">
+        <header class="header">
+            <div class="header-left"><h2>Admin Dashboard</h2></div>
+            <div class="header-right">
+                <div class="search-box"><i class="fas fa-search"></i><input type="text" placeholder="Search tickets..."></div>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <a href="login.html" class="btn btn-outline" style="font-size:11px; text-decoration:none;">Logout</a>
+                </div>
+            </div>
+        </header>
+
+        <section class="content-area">
+            <div class="dashboard-grid">
+                <div class="stat-card"><h3>Total Tickets</h3><div class="number">4</div></div>
+                <div class="stat-card"><h3>Open Tickets</h3><div class="number" style="color: var(--accent-blue);">2</div></div>
+                <div class="stat-card"><h3>In Progress</h3><div class="number" style="color: var(--accent-orange);">1</div></div>
+                <div class="stat-card"><h3>Resolved</h3><div class="number" style="color: var(--accent-green);">1</div></div>
+            </div>
+
+            <div class="row">
+                <div class="col-50 table-container">
+                    <div class="table-header"><h3>Recent Tickets</h3></div>
+                    <table>
+                        <thead><tr><th>ID</th><th>Subject</th><th>User</th><th>Status</th></tr></thead>
+                        <tbody>
+                            <tr><td>#TKT-1052</td><td>WiFi down</td><td>Sarah J.</td><td><span class="status-badge open">Open</span></td></tr>
+                            <tr><td>#TKT-1051</td><td>Laptop broken</td><td>Mike R.</td><td><span class="status-badge in-progress">In Progress</span></td></tr>
+                            <tr><td>#TKT-1050</td><td>VPN Error</td><td>Emily K.</td><td><span class="status-badge closed">Closed</span></td></tr>
+                            <tr><td>#TKT-1053</td><td>Printer Error</td><td>Tanaka R.</td><td><span class="status-badge open">Open</span></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="col-50 table-container">
+                    <div class="table-header"><h3>Admin Actions</h3></div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                        <button class="btn btn-primary" onclick="alert('Create Technician Form')"><i class="fas fa-user-plus"></i> Create Tech</button>
+                        <button class="btn btn-danger" onclick="alert('Delete User Form')"><i class="fas fa-user-minus"></i> Delete Account</button>
+                        <button class="btn btn-success" onclick="alert('Report Generation Logic')"><i class="fas fa-chart-line"></i> Generate Reports</button>
+                    </div>
+                    <div class="mt-20">
+                        <h4 style="color: var(--text-muted); font-size:14px; margin-bottom:10px;">Performance Overview</h4>
+                        <div style="background: var(--bg-input); border-radius:6px; padding:15px;">
+                            <p style="color:var(--text-muted)">Technician Jane: <strong style="color:#fff;">24 Resolved</strong></p>
+                            <p style="color:var(--text-muted)">Technician Mike: <strong style="color:#fff;">18 Resolved</strong></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+</body>
+</html>
