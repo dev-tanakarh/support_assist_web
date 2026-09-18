@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HelpDesk - Admin Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0b1120; --bg-sidebar: #10192b; --bg-card: #151e30;
+            --bg-input: #1c273f; --text-main: #ffffff; --text-muted: #8b9bb5;
+            --accent-blue: #3b82f6; --accent-green: #10b981; --accent-orange: #f59e0b;
+            --accent-red: #ef4444; --border-color: #26334d; --radius: 12px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg-dark); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
+        ::-webkit-scrollbar { width: 8px; } ::-webkit-scrollbar-track { background: var(--bg-dark); } ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+
+        .sidebar { width: 240px; background-color: var(--bg-sidebar); display: flex; flex-direction: column; padding: 20px; border-right: 1px solid var(--border-color); flex-shrink: 0; }
+        .logo { display: flex; align-items: center; gap: 12px; margin-bottom: 40px; }
+        .logo i { font-size: 32px; color: var(--accent-blue); } .logo h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.5px; }
+        .nav-menu { display: flex; flex-direction: column; gap: 4px; flex-grow: 1; }
+        .nav-item { display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 8px; color: var(--text-muted); text-decoration: none; cursor: pointer; transition: all 0.2s; font-size: 14px; border: none; background: none; width: 100%; text-align: left; font-family: inherit; }
+        .nav-item:hover { background-color: rgba(255,255,255,0.05); color: #fff; }
+        .nav-item.active { background-color: var(--accent-blue); color: white; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4); }
+        .nav-item i { width: 20px; text-align: center; }
+        .hidden { display: none !important; }
+
+        .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .header { height: 70px; background-color: var(--bg-sidebar); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; padding: 0 30px; flex-shrink: 0; }
+        .header-left { display: flex; align-items: center; gap: 15px; } .header-left h2 { font-size: 18px; font-weight: 500; }
+        .header-right { display: flex; align-items: center; gap: 20px; }
+        .search-box { background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 16px; display: flex; align-items: center; gap: 10px; color: var(--text-muted); width: 220px; }
+        .search-box input { background: transparent; border: none; outline: none; color: #fff; width: 100%; font-size: 13px; }
+
+        .content-area { padding: 24px 30px; overflow-y: auto; flex-grow: 1; }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: var(--bg-card); padding: 20px; border-radius: var(--radius); border: 1px solid var(--border-color); }
+        .stat-card h3 { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
+        .stat-card .number { font-size: 28px; font-weight: 600; }
+
+        .table-container { background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border-color); padding: 20px; }
+        .table-header { display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .table-header h3 { font-size: 16px; font-weight: 500; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th { text-align: left; color: var(--text-muted); font-weight: 500; padding: 12px 0; border-bottom: 1px solid var(--border-color); }
+        td { padding: 16px 0; border-bottom: 1px solid var(--border-color); color: #ddd; }
+        tr.clickable-row { cursor: pointer; }
+        tr.clickable-row:hover td { color: #fff; }
+
+        .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+        .status-badge.open { background: rgba(59, 130, 246, 0.2); color: var(--accent-blue); }
+        .status-badge.in-progress { background: rgba(245, 158, 11, 0.2); color: var(--accent-orange); }
+        .status-badge.resolved { background: rgba(16, 185, 129, 0.2); color: var(--accent-green); }
+        .status-badge.closed { background: rgba(139, 146, 165, 0.2); color: var(--text-muted); }
+        .priority-badge { padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+        .priority-badge.high { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); }
+        .priority-badge.medium { background: rgba(245, 158, 11, 0.2); color: var(--accent-orange); }
+        .priority-badge.low { background: rgba(139, 146, 165, 0.2); color: var(--text-muted); }
+        .role-badge { padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; background: rgba(139,146,165,0.2); color: var(--text-muted); }
+
+        .btn { padding: 8px 16px; border-radius: 8px; border: none; font-weight: 500; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+        .btn-primary { background: var(--accent-blue); color: #fff; } .btn-primary:hover { background: #2563eb; }
+        .btn-success { background: var(--accent-green); color: #fff; } .btn-danger { background: var(--accent-red); color: #fff; }
+        .btn-outline { background: transparent; border: 1px solid var(--border-color); color: var(--accent-red); }
+        .btn-ghost { background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-icon { background: transparent; border: none; color: var(--accent-red); cursor: pointer; font-size: 13px; }
+
+        .row { display: flex; gap: 20px; flex-wrap: wrap; } .col-50 { flex: 1; min-width: 300px; }
+        .mt-20 { margin-top: 20px; }
+        .empty-row td { text-align: center; color: var(--text-muted); padding: 24px 0; }
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; margin-bottom: 6px; font-size: 12px; color: var(--text-muted); }
+        .form-control { width: 100%; padding: 10px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; color: #fff; outline: none; font-family: inherit; font-size: 13px; }
+        select.form-control { width: auto; }
+        .banner { padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 12px; display: none; }
+        .banner.success { background: rgba(16,185,129,0.15); color: #6ee7b7; border: 1px solid var(--accent-green); }
+        .banner.error { background: rgba(239,68,68,0.15); color: #fca5a5; border: 1px solid var(--accent-red); }
+        .mini-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border-color); font-size: 13px; }
+        .mini-row:last-child { border-bottom: none; }
+
+        .bar-chart { display: flex; flex-direction: column; gap: 10px; }
+        .bar-row { display: grid; grid-template-columns: 90px 1fr 40px; gap: 10px; align-items: center; font-size: 12px; }
+        .bar-track { background: var(--bg-input); border-radius: 6px; height: 14px; overflow: hidden; }
+        .bar-fill { height: 100%; border-radius: 6px; background: var(--accent-blue); }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="logo"> <i class="fas fa-headset"></i> <h1>HelpDesk</h1> </div>
+        <nav class="nav-menu">
+            <button class="nav-item active" data-tab="dashboard"><i class="fas fa-house"></i> Dashboard</button>
+            <button class="nav-item" data-tab="tickets"><i class="fas fa-ticket"></i> Tickets</button>
+            <button class="nav-item" data-tab="users"><i class="fas fa-users"></i> Users</button>
+            <button class="nav-item" data-tab="technicians"><i class="fas fa-user-tie"></i> Technicians</button>
+            <button class="nav-item" data-tab="reports"><i class="fas fa-chart-pie"></i> Reports</button>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <header class="header">
+            <div class="header-left"><h2 id="pageTitle">Admin Dashboard</h2></div>
+            <div class="header-right">
+                <div class="search-box"><i class="fas fa-search"></i><input type="text" placeholder="Search tickets..." disabled title="Use the Tickets tab search"></div>
+                <a href="#" id="logoutBtn" class="btn btn-outline" style="font-size:11px; text-decoration:none;">Logout</a>
+            </div>
+        </header>
+
+        <section class="content-area">
+
+            <!-- ===== DASHBOARD ===== -->
+            <div class="tab-panel active" id="tab-dashboard">
+                <div class="dashboard-grid">
+                    <div class="stat-card"><h3>Total Tickets</h3><div class="number" id="statTotal">—</div></div>
+                    <div class="stat-card"><h3>Open Tickets</h3><div class="number" style="color: var(--accent-blue);" id="statOpen">—</div></div>
+                    <div class="stat-card"><h3>In Progress</h3><div class="number" style="color: var(--accent-orange);" id="statProgress">—</div></div>
+                    <div class="stat-card"><h3>Overdue</h3><div class="number" style="color: var(--accent-red);" id="statOverdue">—</div></div>
+                </div>
+
+                <div class="row">
+                    <div class="col-50 table-container">
+                        <div class="table-header"><h3>Recent Tickets</h3></div>
+                        <table>
+                            <thead><tr><th>ID</th><th>Subject</th><th>User</th><th>Status</th></tr></thead>
+                            <tbody id="recentBody"><tr class="empty-row"><td colspan="4">Loading...</td></tr></tbody>
+                        </table>
+                    </div>
+
+                    <div class="col-50 table-container">
+                        <div class="table-header"><h3>Quick Links</h3></div>
+                        <div class="banner" id="dashBanner"></div>
+                        <div style="display:flex; flex-direction:column; gap:10px;">
+                            <button class="btn btn-ghost" data-goto="tickets" style="text-align:left;"><i class="fas fa-ticket"></i> Browse &amp; filter all tickets</button>
+                            <button class="btn btn-ghost" data-goto="technicians" style="text-align:left;"><i class="fas fa-user-plus"></i> Create or remove a technician</button>
+                            <button class="btn btn-ghost" data-goto="reports" style="text-align:left;"><i class="fas fa-chart-pie"></i> View full performance reports</button>
+                        </div>
+                        <div class="mt-20">
+                            <h4 style="color: var(--text-muted); font-size:14px; margin-bottom:10px;">Top Technicians</h4>
+                            <div id="dashTopTechs" style="background: var(--bg-input); border-radius:6px; padding:15px;"><p style="color:var(--text-muted)">Loading...</p></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== TICKETS ===== -->
+            <div class="tab-panel" id="tab-tickets">
+                <div class="table-container">
+                    <div class="table-header">
+                        <h3>All Tickets</h3>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <input type="text" id="ticketsSearch" class="form-control" placeholder="Search... (Enter)" style="width:180px;">
+                            <select id="ticketsStatusFilter" class="form-control">
+                                <option value="">All statuses</option>
+                                <option value="OPEN">Open</option>
+                                <option value="IN_PROGRESS">In Progress</option>
+                                <option value="RESOLVED">Resolved</option>
+                                <option value="CLOSED">Closed</option>
+                            </select>
+                            <select id="ticketsPriorityFilter" class="form-control">
+                                <option value="">All priorities</option>
+                                <option value="HIGH">High</option>
+                                <option value="MEDIUM">Medium</option>
+                                <option value="LOW">Low</option>
+                            </select>
+                        </div>
+                    </div>
+                    <table>
+                        <thead><tr><th>ID</th><th>Subject</th><th>Reporter</th><th>Technician</th><th>Priority</th><th>Status</th></tr></thead>
+                        <tbody id="ticketsBody"><tr class="empty-row"><td colspan="6">Loading...</td></tr></tbody>
+                    </table>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px;">
+                        <span class="muted" id="ticketsPageInfo" style="color:var(--text-muted); font-size:12px;"></span>
+                        <div style="display:flex; gap:8px;">
+                            <button class="btn btn-ghost" id="ticketsPrevPage">Prev</button>
+                            <button class="btn btn-ghost" id="ticketsNextPage">Next</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== USERS ===== -->
+            <div class="tab-panel" id="tab-users">
+                <div class="table-container">
+                    <div class="table-header">
+                        <h3>All Users</h3>
+                        <select id="usersTypeFilter" class="form-control">
+                            <option value="">All types</option>
+                            <option value="END_USER">End Users</option>
+                            <option value="TECHNICIAN">Technicians</option>
+                            <option value="ADMIN">Admins</option>
+                        </select>
+                    </div>
+                    <table>
+                        <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Type</th><th>Status</th></tr></thead>
+                        <tbody id="usersBody"><tr class="empty-row"><td colspan="5">Loading...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ===== TECHNICIANS ===== -->
+            <div class="tab-panel" id="tab-technicians">
+                <div class="row">
+                    <div class="col-50 table-container">
+                        <div class="table-header"><h3>Create Technician</h3></div>
+                        <div class="banner" id="techBanner"></div>
+                        <form id="createTechForm">
+                            <div class="form-group"><label>Name</label><input class="form-control" id="techName" required></div>
+                            <div class="form-group"><label>Email</label><input class="form-control" type="email" id="techEmail" required></div>
+                            <div class="form-group"><label>Phone</label><input class="form-control" id="techPhone" required></div>
+                            <div class="form-group"><label>Password (min 8 chars)</label><input class="form-control" type="password" id="techPassword" minlength="8" required></div>
+                            <button type="submit" class="btn btn-primary" style="width:100%;" id="createTechBtn">Create Technician</button>
+                        </form>
+                    </div>
+                    <div class="col-50 table-container">
+                        <div class="table-header"><h3>All Technicians</h3></div>
+                        <div id="techList"><p class="muted" style="color:var(--text-muted); font-size:13px;">Loading...</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== REPORTS ===== -->
+            <div class="tab-panel" id="tab-reports">
+                <div class="row">
+                    <div class="col-50 table-container">
+                        <div class="table-header"><h3>Tickets by Status</h3></div>
+                        <div class="bar-chart" id="byStatusChart"><p class="muted" style="color:var(--text-muted)">Loading...</p></div>
+                    </div>
+                    <div class="col-50 table-container">
+                        <div class="table-header"><h3>Tickets by Priority</h3></div>
+                        <div class="bar-chart" id="byPriorityChart"><p class="muted" style="color:var(--text-muted)">Loading...</p></div>
+                    </div>
+                </div>
+                <div class="row mt-20">
+                    <div class="col-50 table-container">
+                        <div class="table-header"><h3>Key Numbers</h3></div>
+                        <div id="reportNumbers"><p class="muted" style="color:var(--text-muted)">Loading...</p></div>
+                    </div>
+                    <div class="col-50 table-container">
+                        <div class="table-header"><h3>Top Technicians</h3></div>
+                        <div id="reportTopTechs"><p class="muted" style="color:var(--text-muted)">Loading...</p></div>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <script type="module">
+        import {
+            isLoggedIn, getCurrentUser, logout, getDashboard, getRecentTickets, getTickets,
+            getUsers, createTechnician, deleteTechnician, assignTicket,
+            statusSlug, prioritySlug, escapeHtml,
+        } from './api.js';
+        import { openTicketModal, closeTicketModal } from './ticket-modal.js';
+        import { startLiveUpdates } from './live-updates.js';
+
+        const user = getCurrentUser();
+        if (!isLoggedIn() || !user || user.userType !== 'ADMIN') {
+            window.location.href = 'login.html';
+        }
+
+        document.getElementById('logoutBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            logout();
+            window.location.href = 'login.html';
+        });
+
+        function statusLabel(s) { return String(s || '').replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase()); }
+        function priorityLabel(p) { return String(p || '').replace(/\b\w/g, c => c.toUpperCase()); }
+        function countFor(rows, key, field) { const r = (rows || []).find(x => x[field] === key); return r ? r.count : 0; }
+
+        // ---- tabs ----
+        const TAB_TITLES = { dashboard: 'Admin Dashboard', tickets: 'Tickets', users: 'Users', technicians: 'Technicians', reports: 'Reports' };
+        document.querySelectorAll('.nav-item[data-tab]').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
+        document.querySelectorAll('[data-goto]').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.goto)));
+        function switchTab(tab) {
+            document.querySelectorAll('.nav-item[data-tab]').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === `tab-${tab}`));
+            document.getElementById('pageTitle').textContent = TAB_TITLES[tab];
+            if (tab === 'dashboard') loadDashboard();
+            if (tab === 'tickets') loadTicketsTab();
+            if (tab === 'users') loadUsersTab();
+            if (tab === 'technicians') loadTechnicians();
+            if (tab === 'reports') loadReports();
+        }
+
+        // ---- ticket detail modal, with the Assign Technician footer ----
+        let technicianCache = null;
+        async function getTechnicianOptions() {
+            if (!technicianCache) technicianCache = await getUsers('TECHNICIAN');
+            return technicianCache;
+        }
+        function openAdminTicket(id, onDone) {
+            openTicketModal(id, async (footer, ticket) => {
+                footer.innerHTML = '<p class="muted" style="color:var(--text-muted); font-size:13px;">Loading technicians...</p>';
+                try {
+                    const techs = await getTechnicianOptions();
+                    const currentId = ticket.assignedTechnician?.id ?? '';
+                    footer.innerHTML = `
+                        <select class="tm-select" id="tmTechSelect">
+                            <option value="">Select a technician...</option>
+                            ${techs.map(t => `<option value="${t.id}" ${t.id === currentId ? 'selected' : ''}>${escapeHtml(t.name)}</option>`).join('')}
+                        </select>
+                        <button class="btn btn-primary" id="tmAssignBtn">${ticket.assignedTechnician ? 'Reassign' : 'Assign Technician'}</button>
+                        <div class="tm-msg" id="tmMsg"></div>
+                    `;
+                    footer.querySelector('#tmAssignBtn').addEventListener('click', async (e) => {
+                        const techId = footer.querySelector('#tmTechSelect').value;
+                        const msg = footer.querySelector('#tmMsg');
+                        if (!techId) { msg.className = 'tm-msg err'; msg.textContent = 'Pick a technician first.'; return; }
+                        e.target.disabled = true; e.target.textContent = 'Assigning...';
+                        try {
+                            await assignTicket(ticket.id, techId);
+                            closeTicketModal();
+                            onDone();
+                        } catch (err) {
+                            msg.className = 'tm-msg err'; msg.textContent = err.message;
+                            e.target.disabled = false; e.target.textContent = ticket.assignedTechnician ? 'Reassign' : 'Assign Technician';
+                        }
+                    });
+                } catch (err) {
+                    footer.innerHTML = `<p class="tm-error">${escapeHtml(err.message)}</p>`;
+                }
+            });
+        }
+        document.addEventListener('click', (e) => {
+            const row = e.target.closest('[data-open-ticket]');
+            if (row) openAdminTicket(row.dataset.openTicket, refreshCurrentTab);
+        });
+        function refreshCurrentTab() {
+            const active = document.querySelector('.tab-panel.active').id.replace('tab-', '');
+            switchTab(active);
+        }
+
+        // ---- Dashboard ----
+        async function loadDashboard() {
+            try {
+                const d = await getDashboard();
+                const total = (d.byStatus || []).reduce((sum, r) => sum + r.count, 0);
+                document.getElementById('statTotal').textContent = total;
+                document.getElementById('statOpen').textContent = countFor(d.byStatus, 'OPEN', 'status');
+                document.getElementById('statProgress').textContent = countFor(d.byStatus, 'IN_PROGRESS', 'status');
+                document.getElementById('statOverdue').textContent = d.overdueCount ?? 0;
+
+                const topEl = document.getElementById('dashTopTechs');
+                topEl.innerHTML = (d.topTechnicians || []).length
+                    ? d.topTechnicians.map(t => `<p style="color:var(--text-muted)">${escapeHtml(t.name)}: <strong style="color:#fff;">${t.resolved_count} resolved</strong></p>`).join('')
+                    : '<p style="color:var(--text-muted)">No resolutions yet.</p>';
+            } catch (err) {
+                document.getElementById('dashBanner').className = 'banner error';
+                document.getElementById('dashBanner').textContent = err.message;
+                document.getElementById('dashBanner').style.display = 'block';
+            }
+
+            const tbody = document.getElementById('recentBody');
+            try {
+                const tickets = await getRecentTickets(6);
+                tbody.innerHTML = tickets.length ? tickets.map(t => `
+                    <tr class="clickable-row" data-open-ticket="${escapeHtml(t.id)}">
+                        <td>#${escapeHtml(t.id)}</td>
+                        <td>${escapeHtml(t.subject)}</td>
+                        <td>${escapeHtml(t.reporter?.name ?? '—')}</td>
+                        <td><span class="status-badge ${statusSlug(t.status)}">${statusLabel(t.status)}</span></td>
+                    </tr>
+                `).join('') : '<tr class="empty-row"><td colspan="4">No tickets yet.</td></tr>';
+            } catch (err) {
+                tbody.innerHTML = `<tr class="empty-row"><td colspan="4">${escapeHtml(err.message)}</td></tr>`;
+            }
+        }
+
+        // ---- Tickets tab (paginated + filterable) ----
+        let ticketsPage = 1;
+        async function loadTicketsTab() {
+            const tbody = document.getElementById('ticketsBody');
+            tbody.innerHTML = '<tr class="empty-row"><td colspan="6">Loading...</td></tr>';
+            try {
+                const { tickets, pagination } = await getTickets({
+                    page: ticketsPage,
+                    per_page: 15,
+                    status: document.getElementById('ticketsStatusFilter').value,
+                    priority: document.getElementById('ticketsPriorityFilter').value,
+                    q: document.getElementById('ticketsSearch').value.trim(),
+                });
+                tbody.innerHTML = tickets.length ? tickets.map(t => `
+                    <tr class="clickable-row" data-open-ticket="${escapeHtml(t.id)}">
+                        <td>#${escapeHtml(t.id)}</td>
+                        <td>${escapeHtml(t.subject)}</td>
+                        <td>${escapeHtml(t.reporter?.name ?? '—')}</td>
+                        <td>${escapeHtml(t.assignedTechnician?.name ?? '—')}</td>
+                        <td><span class="priority-badge ${prioritySlug(t.priority)}">${priorityLabel(t.priority)}</span></td>
+                        <td><span class="status-badge ${statusSlug(t.status)}">${statusLabel(t.status)}</span></td>
+                    </tr>
+                `).join('') : '<tr class="empty-row"><td colspan="6">No tickets match this filter.</td></tr>';
+                document.getElementById('ticketsPageInfo').textContent = `Page ${pagination.page} of ${pagination.totalPages || 1} (${pagination.total} total)`;
+                document.getElementById('ticketsPrevPage').disabled = pagination.page <= 1;
+                document.getElementById('ticketsNextPage').disabled = pagination.page >= pagination.totalPages;
+            } catch (err) {
+                tbody.innerHTML = `<tr class="empty-row"><td colspan="6">${escapeHtml(err.message)}</td></tr>`;
+            }
+        }
+        document.getElementById('ticketsStatusFilter').addEventListener('change', () => { ticketsPage = 1; loadTicketsTab(); });
+        document.getElementById('ticketsPriorityFilter').addEventListener('change', () => { ticketsPage = 1; loadTicketsTab(); });
+        document.getElementById('ticketsSearch').addEventListener('keydown', (e) => { if (e.key === 'Enter') { ticketsPage = 1; loadTicketsTab(); } });
+        document.getElementById('ticketsPrevPage').addEventListener('click', () => { if (ticketsPage > 1) { ticketsPage--; loadTicketsTab(); } });
+        document.getElementById('ticketsNextPage').addEventListener('click', () => { ticketsPage++; loadTicketsTab(); });
+
+        // ---- Users tab ----
+        async function loadUsersTab() {
+            const tbody = document.getElementById('usersBody');
+            tbody.innerHTML = '<tr class="empty-row"><td colspan="5">Loading...</td></tr>';
+            try {
+                const type = document.getElementById('usersTypeFilter').value;
+                const users = await getUsers(type || undefined);
+                tbody.innerHTML = users.length ? users.map(u => `
+                    <tr>
+                        <td>${escapeHtml(u.name)}</td>
+                        <td>${escapeHtml(u.email)}</td>
+                        <td>${escapeHtml(u.phone ?? '—')}</td>
+                        <td><span class="role-badge">${escapeHtml(u.userType)}</span></td>
+                        <td>${u.isActive ? 'Active' : 'Deactivated'}</td>
+                    </tr>
+                `).join('') : '<tr class="empty-row"><td colspan="5">No users found.</td></tr>';
+            } catch (err) {
+                tbody.innerHTML = `<tr class="empty-row"><td colspan="5">${escapeHtml(err.message)}</td></tr>`;
+            }
+        }
+        document.getElementById('usersTypeFilter').addEventListener('change', loadUsersTab);
+
+        // ---- Technicians tab ----
+        function showTechBanner(kind, message) {
+            const el = document.getElementById('techBanner');
+            el.className = `banner ${kind}`;
+            el.textContent = message;
+            el.style.display = 'block';
+        }
+        async function loadTechnicians() {
+            technicianCache = null; // list may have changed
+            const list = document.getElementById('techList');
+            try {
+                const techs = await getUsers('TECHNICIAN');
+                list.innerHTML = techs.length
+                    ? techs.map(t => `
+                        <div class="mini-row">
+                            <span>${escapeHtml(t.name)} <span style="color:var(--text-muted)">(${escapeHtml(t.email)})</span></span>
+                            <button class="btn-icon" data-del-tech="${escapeHtml(t.id)}" title="Delete technician"><i class="fas fa-user-minus"></i></button>
+                        </div>
+                    `).join('')
+                    : '<p style="color:var(--text-muted); font-size:13px;">No technicians yet.</p>';
+            } catch (err) {
+                list.innerHTML = `<p style="color:var(--accent-red); font-size:13px;">${escapeHtml(err.message)}</p>`;
+            }
+        }
+        document.getElementById('techList').addEventListener('click', async (e) => {
+            const id = e.target.closest('[data-del-tech]')?.dataset.delTech;
+            if (!id) return;
+            if (!confirm('Delete this technician? This cannot be undone.')) return;
+            try { await deleteTechnician(id); showTechBanner('success', 'Technician deleted.'); loadTechnicians(); }
+            catch (err) { showTechBanner('error', err.message); }
+        });
+        document.getElementById('createTechForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('createTechBtn');
+            btn.disabled = true; btn.textContent = 'Creating...';
+            try {
+                await createTechnician({
+                    name: document.getElementById('techName').value.trim(),
+                    email: document.getElementById('techEmail').value.trim(),
+                    phone: document.getElementById('techPhone').value.trim(),
+                    password: document.getElementById('techPassword').value,
+                });
+                showTechBanner('success', 'Technician created.');
+                document.getElementById('createTechForm').reset();
+                loadTechnicians();
+            } catch (err) {
+                showTechBanner('error', err.errors ? (Object.values(err.errors)[0] || err.message) : err.message);
+            } finally {
+                btn.disabled = false; btn.textContent = 'Create Technician';
+            }
+        });
+
+        // ---- Reports tab ----
+        async function loadReports() {
+            try {
+                const d = await getDashboard();
+                const totalStatus = (d.byStatus || []).reduce((s, r) => s + r.count, 0) || 1;
+                const totalPriority = (d.byPriority || []).reduce((s, r) => s + r.count, 0) || 1;
+
+                document.getElementById('byStatusChart').innerHTML = (d.byStatus || []).map(r => `
+                    <div class="bar-row">
+                        <span>${escapeHtml(statusLabel(r.status))}</span>
+                        <div class="bar-track"><div class="bar-fill" style="width:${Math.round(r.count / totalStatus * 100)}%; background:var(--accent-blue);"></div></div>
+                        <span>${r.count}</span>
+                    </div>
+                `).join('') || '<p class="muted" style="color:var(--text-muted)">No data yet.</p>';
+
+                document.getElementById('byPriorityChart').innerHTML = (d.byPriority || []).map(r => `
+                    <div class="bar-row">
+                        <span>${escapeHtml(priorityLabel(r.priority))}</span>
+                        <div class="bar-track"><div class="bar-fill" style="width:${Math.round(r.count / totalPriority * 100)}%; background:var(--accent-orange);"></div></div>
+                        <span>${r.count}</span>
+                    </div>
+                `).join('') || '<p class="muted" style="color:var(--text-muted)">No data yet.</p>';
+
+                const avgMinutes = d.avgResolutionSeconds ? Math.round(d.avgResolutionSeconds / 60) : null;
+                document.getElementById('reportNumbers').innerHTML = `
+                    <div class="mini-row"><span>Total tickets</span><strong>${totalStatus}</strong></div>
+                    <div class="mini-row"><span>Overdue</span><strong style="color:var(--accent-red)">${d.overdueCount ?? 0}</strong></div>
+                    <div class="mini-row"><span>Avg. resolution time</span><strong>${avgMinutes !== null ? avgMinutes + ' min' : '—'}</strong></div>
+                `;
+
+                document.getElementById('reportTopTechs').innerHTML = (d.topTechnicians || []).length
+                    ? d.topTechnicians.map(t => `<div class="mini-row"><span>${escapeHtml(t.name)}</span><strong>${t.resolved_count} resolved</strong></div>`).join('')
+                    : '<p class="muted" style="color:var(--text-muted)">No resolutions yet.</p>';
+            } catch (err) {
+                document.getElementById('byStatusChart').innerHTML = `<p class="tm-error" style="color:var(--accent-red)">${escapeHtml(err.message)}</p>`;
+            }
+        }
+
+        loadDashboard();
+        startLiveUpdates(refreshCurrentTab);
+    </script>
+</body>
+</html>

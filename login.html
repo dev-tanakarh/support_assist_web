@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HelpDesk - Login</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root { --bg-dark: #0c0e15; --primary-blue: #2563eb; --text-main: #ffffff; --bg-card: #141721; --border-color: #2a3040; --accent-red: #ef4444; }
+        body { background-color: var(--bg-dark); color: var(--text-main); display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: sans-serif; margin: 0; }
+        .login-box { background: var(--bg-card); padding: 40px; border-radius: 16px; border: 1px solid var(--border-color); width: 380px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .logo { text-align: center; font-size: 24px; font-weight: bold; color: var(--primary-blue); margin-bottom: 20px; }
+        input { width: 100%; background: #1e2330; border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; color: white; margin-bottom: 15px; outline: none; box-sizing: border-box; font-size: 14px; }
+        button { width: 100%; padding: 12px; background: var(--primary-blue); border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        button:hover { opacity: 0.9; }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
+        .helper { text-align: center; font-size: 12px; color: #8b92a5; margin-top: 15px; }
+        .toggle-link { text-align: center; font-size: 13px; color: var(--primary-blue); margin-top: 12px; cursor: pointer; text-decoration: underline; }
+        .error-banner { background: rgba(239,68,68,0.15); border: 1px solid var(--accent-red); color: #fca5a5; font-size: 13px; padding: 10px 12px; border-radius: 8px; margin-bottom: 15px; display: none; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <div class="logo"><i class="fas fa-headset"></i> HelpDesk</div>
+
+        <div id="loginError" class="error-banner"></div>
+
+        <form id="loginForm">
+            <input type="email" id="email" placeholder="Email Address" required>
+            <input type="password" id="password" placeholder="Password" required>
+            <button type="submit"><i class="fas fa-sign-in-alt"></i> Sign In</button>
+        </form>
+
+        <form id="signupForm" class="hidden">
+            <input type="text" id="suName" placeholder="Full Name" required>
+            <input type="email" id="suEmail" placeholder="Email Address" required>
+            <input type="tel" id="suPhone" placeholder="Phone (e.g. +260...)" required>
+            <input type="password" id="suPassword" placeholder="Password (min 8 characters)" required minlength="8">
+            <button type="submit"><i class="fas fa-user-plus"></i> Create Account</button>
+        </form>
+
+        <div class="toggle-link" id="toggleLink">Need an account? Sign up</div>
+    </div>
+
+    <script type="module">
+        import { login, signup, isLoggedIn, getCurrentUser } from './api.js';
+
+        const ROLE_HOME = { END_USER: 'user.html', TECHNICIAN: 'technician.html', ADMIN: 'admin.html' };
+
+        // Already signed in with a valid session? Skip straight to the dashboard.
+        if (isLoggedIn()) {
+            const user = getCurrentUser();
+            window.location.href = ROLE_HOME[user.userType] || 'user.html';
+        }
+
+        const loginForm = document.getElementById('loginForm');
+        const signupForm = document.getElementById('signupForm');
+        const errorBox = document.getElementById('loginError');
+        const toggleLink = document.getElementById('toggleLink');
+        let mode = 'login';
+
+        toggleLink.addEventListener('click', () => {
+            mode = mode === 'login' ? 'signup' : 'login';
+            loginForm.classList.toggle('hidden', mode !== 'login');
+            signupForm.classList.toggle('hidden', mode !== 'signup');
+            toggleLink.textContent = mode === 'login' ? 'Need an account? Sign up' : 'Already have an account? Sign in';
+            errorBox.style.display = 'none';
+        });
+
+        function showError(message) {
+            errorBox.textContent = message;
+            errorBox.style.display = 'block';
+        }
+
+        function setBusy(form, busy, label) {
+            const btn = form.querySelector('button');
+            btn.disabled = busy;
+            if (busy) btn.dataset.original = btn.innerHTML, btn.innerHTML = label;
+            else btn.innerHTML = btn.dataset.original;
+        }
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorBox.style.display = 'none';
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            setBusy(loginForm, true, 'Signing in...');
+            try {
+                const user = await login(email, password);
+                window.location.href = ROLE_HOME[user.userType] || 'user.html';
+            } catch (err) {
+                showError(err.message);
+            } finally {
+                setBusy(loginForm, false);
+            }
+        });
+
+        // Public signup always creates an END_USER (per API docs).
+        signupForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorBox.style.display = 'none';
+            const name = document.getElementById('suName').value.trim();
+            const email = document.getElementById('suEmail').value.trim();
+            const phone = document.getElementById('suPhone').value.trim();
+            const password = document.getElementById('suPassword').value;
+            setBusy(signupForm, true, 'Creating account...');
+            try {
+                await signup({ name, email, phone, password });
+                window.location.href = 'user.html';
+            } catch (err) {
+                if (err.errors) {
+                    const first = Object.values(err.errors)[0];
+                    showError(first || err.message);
+                } else {
+                    showError(err.message);
+                }
+            } finally {
+                setBusy(signupForm, false);
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HelpDesk - Technician Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0b1120; --bg-sidebar: #10192b; --bg-card: #151e30;
+            --bg-input: #1c273f; --text-main: #ffffff; --text-muted: #8b9bb5;
+            --accent-blue: #3b82f6; --accent-green: #10b981; --accent-orange: #f59e0b;
+            --accent-red: #ef4444; --border-color: #26334d; --radius: 12px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg-dark); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
+        ::-webkit-scrollbar { width: 8px; } ::-webkit-scrollbar-track { background: var(--bg-dark); } ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+
+        .sidebar { width: 240px; background-color: var(--bg-sidebar); display: flex; flex-direction: column; padding: 20px; border-right: 1px solid var(--border-color); flex-shrink: 0; }
+        .logo { display: flex; align-items: center; gap: 12px; margin-bottom: 40px; }
+        .logo i { font-size: 32px; color: var(--accent-blue); } .logo h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.5px; }
+        .nav-menu { display: flex; flex-direction: column; gap: 4px; flex-grow: 1; }
+        .nav-item { display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 8px; color: var(--text-muted); text-decoration: none; cursor: pointer; transition: all 0.2s; font-size: 14px; border: none; background: none; width: 100%; text-align: left; font-family: inherit; }
+        .nav-item:hover { background-color: rgba(255,255,255,0.05); color: #fff; }
+        .nav-item.active { background-color: var(--accent-blue); color: white; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4); }
+        .nav-item i { width: 20px; text-align: center; }
+        .hidden { display: none !important; }
+
+        .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .header { height: 70px; background-color: var(--bg-sidebar); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; padding: 0 30px; flex-shrink: 0; }
+        .header-left { display: flex; align-items: center; gap: 15px; } .header-left h2 { font-size: 18px; font-weight: 500; }
+        .header-right { display: flex; align-items: center; gap: 20px; }
+        .search-box { background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 16px; display: flex; align-items: center; gap: 10px; color: var(--text-muted); width: 220px; }
+        .search-box input { background: transparent; border: none; outline: none; color: #fff; width: 100%; font-size: 13px; }
+
+        .content-area { padding: 24px 30px; overflow-y: auto; flex-grow: 1; }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: var(--bg-card); padding: 20px; border-radius: var(--radius); border: 1px solid var(--border-color); }
+        .stat-card h3 { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
+        .stat-card .number { font-size: 28px; font-weight: 600; }
+
+        .table-container { background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border-color); padding: 20px; }
+        .table-header { display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .table-header h3 { font-size: 16px; font-weight: 500; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th { text-align: left; color: var(--text-muted); font-weight: 500; padding: 12px 0; border-bottom: 1px solid var(--border-color); }
+        td { padding: 16px 0; border-bottom: 1px solid var(--border-color); color: #ddd; }
+        tr.clickable-row { cursor: pointer; }
+        tr.clickable-row:hover td { color: #fff; }
+
+        .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+        .status-badge.open { background: rgba(59, 130, 246, 0.2); color: var(--accent-blue); }
+        .status-badge.in-progress { background: rgba(245, 158, 11, 0.2); color: var(--accent-orange); }
+        .status-badge.resolved { background: rgba(16, 185, 129, 0.2); color: var(--accent-green); }
+        .status-badge.closed { background: rgba(139, 146, 165, 0.2); color: var(--text-muted); }
+        .priority-badge { padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+        .priority-badge.high { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); }
+        .priority-badge.medium { background: rgba(245, 158, 11, 0.2); color: var(--accent-orange); }
+        .priority-badge.low { background: rgba(139, 146, 165, 0.2); color: var(--text-muted); }
+
+        .btn { padding: 8px 16px; border-radius: 8px; border: none; font-weight: 500; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+        .btn-primary { background: var(--accent-blue); color: #fff; } .btn-primary:hover { background: #2563eb; }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-outline { background: transparent; border: 1px solid var(--border-color); color: var(--accent-red); }
+        .btn-ghost { background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; }
+
+        .row { display: flex; gap: 20px; flex-wrap: wrap; } .col-50 { flex: 1; min-width: 300px; }
+        .empty-row td { text-align: center; color: var(--text-muted); padding: 24px 0; }
+        .form-control { padding: 8px 10px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; color: #fff; font-size: 13px; font-family: inherit; }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="logo"> <i class="fas fa-headset"></i> <h1>HelpDesk</h1> </div>
+        <nav class="nav-menu">
+            <button class="nav-item active" data-tab="dashboard"><i class="fas fa-house"></i> Dashboard</button>
+            <button class="nav-item" data-tab="open"><i class="fas fa-list-check"></i> Open Tickets</button>
+            <button class="nav-item" data-tab="queue"><i class="fas fa-user-gear"></i> My Queue</button>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <header class="header">
+            <div class="header-left"><h2 id="pageTitle">Technician Dashboard</h2></div>
+            <div class="header-right">
+                <div class="search-box"><i class="fas fa-search"></i><input type="text" placeholder="Search tickets..." disabled title="Coming soon"></div>
+                <a href="#" id="logoutBtn" class="btn btn-outline" style="font-size:11px; text-decoration:none;">Logout</a>
+            </div>
+        </header>
+
+        <section class="content-area">
+
+            <!-- ===== DASHBOARD ===== -->
+            <div class="tab-panel active" id="tab-dashboard">
+                <div class="dashboard-grid">
+                    <div class="stat-card"><h3>Unassigned Tickets</h3><div class="number" style="color: var(--accent-blue);" id="statUnassigned">—</div></div>
+                    <div class="stat-card"><h3>Assigned to Me (Active)</h3><div class="number" style="color: var(--accent-orange);" id="statAssigned">—</div></div>
+                    <div class="stat-card"><h3>Resolved (This Month)</h3><div class="number" style="color: var(--accent-green);" id="statResolvedMonth">—</div></div>
+                </div>
+
+                <div class="row">
+                    <div class="col-50 table-container">
+                        <div class="table-header"><h3>Unassigned Pool (latest)</h3></div>
+                        <table>
+                            <thead><tr><th>ID</th><th>Subject</th><th>Priority</th></tr></thead>
+                            <tbody id="dashUnassignedBody"><tr class="empty-row"><td colspan="3">Loading...</td></tr></tbody>
+                        </table>
+                    </div>
+                    <div class="col-50 table-container">
+                        <div class="table-header"><h3>My Assigned Tickets</h3></div>
+                        <table>
+                            <thead><tr><th>ID</th><th>Subject</th><th>Status</th></tr></thead>
+                            <tbody id="dashAssignedBody"><tr class="empty-row"><td colspan="3">Loading...</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== OPEN TICKETS (full unassigned pool) ===== -->
+            <div class="tab-panel" id="tab-open">
+                <div class="table-container">
+                    <div class="table-header">
+                        <h3>Unassigned Pool</h3>
+                        <select id="openPriorityFilter" class="form-control">
+                            <option value="">All priorities</option>
+                            <option value="HIGH">High</option>
+                            <option value="MEDIUM">Medium</option>
+                            <option value="LOW">Low</option>
+                        </select>
+                    </div>
+                    <table>
+                        <thead><tr><th>ID</th><th>Subject</th><th>Category</th><th>Priority</th><th>Created</th></tr></thead>
+                        <tbody id="openBody"><tr class="empty-row"><td colspan="5">Loading...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ===== MY QUEUE (full assigned list) ===== -->
+            <div class="tab-panel" id="tab-queue">
+                <div class="table-container">
+                    <div class="table-header">
+                        <h3>My Queue</h3>
+                        <select id="queueStatusFilter" class="form-control">
+                            <option value="">All statuses</option>
+                            <option value="IN_PROGRESS">In Progress</option>
+                            <option value="RESOLVED">Resolved</option>
+                            <option value="CLOSED">Closed</option>
+                        </select>
+                    </div>
+                    <table>
+                        <thead><tr><th>ID</th><th>Subject</th><th>Priority</th><th>Status</th><th>Created</th></tr></thead>
+                        <tbody id="queueBody"><tr class="empty-row"><td colspan="5">Loading...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <script type="module">
+        import {
+            isLoggedIn, getCurrentUser, logout, getTickets,
+            acceptTicket, updateTicketStatus, statusSlug, prioritySlug, escapeHtml,
+        } from './api.js';
+        import { openTicketModal, closeTicketModal } from './ticket-modal.js';
+        import { startLiveUpdates } from './live-updates.js';
+
+        const user = getCurrentUser();
+        if (!isLoggedIn() || !user || user.userType !== 'TECHNICIAN') {
+            window.location.href = 'login.html';
+        }
+
+        document.getElementById('logoutBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            logout();
+            window.location.href = 'login.html';
+        });
+
+        function statusLabel(s) { return String(s || '').replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase()); }
+        function priorityLabel(p) { return String(p || '').replace(/\b\w/g, c => c.toUpperCase()); }
+        function isSameMonth(iso) {
+            if (!iso) return false;
+            const d = new Date(iso), now = new Date();
+            return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+        }
+
+        // ---- tabs ----
+        const TAB_TITLES = { dashboard: 'Technician Dashboard', open: 'Open Tickets', queue: 'My Queue' };
+        document.querySelectorAll('.nav-item[data-tab]').forEach(btn => {
+            btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+        });
+        function switchTab(tab) {
+            document.querySelectorAll('.nav-item[data-tab]').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === `tab-${tab}`));
+            document.getElementById('pageTitle').textContent = TAB_TITLES[tab];
+            if (tab === 'dashboard') loadDashboard();
+            if (tab === 'open') loadOpenTickets();
+            if (tab === 'queue') loadQueue();
+        }
+
+        // ---- ticket modal footers ----
+        function openUnassignedTicket(id, onDone) {
+            openTicketModal(id, (footer, ticket) => {
+                footer.innerHTML = `
+                    <button class="btn btn-primary" id="tmAccept">Accept Job</button>
+                    <div class="tm-msg" id="tmMsg"></div>
+                `;
+                footer.querySelector('#tmAccept').addEventListener('click', async (e) => {
+                    e.target.disabled = true; e.target.textContent = 'Accepting...';
+                    try {
+                        await acceptTicket(ticket.id);
+                        closeTicketModal();
+                        onDone();
+                    } catch (err) {
+                        const msg = footer.querySelector('#tmMsg');
+                        msg.className = 'tm-msg err'; msg.textContent = err.message;
+                        e.target.disabled = false; e.target.textContent = 'Accept Job';
+                    }
+                });
+            });
+        }
+        function openAssignedTicket(id, onDone) {
+            openTicketModal(id, (footer, ticket) => {
+                if (ticket.status === 'RESOLVED' || ticket.status === 'CLOSED') {
+                    footer.innerHTML = '<span class="muted" style="color:var(--text-muted); font-size:13px;">This ticket is already closed out.</span>';
+                    return;
+                }
+                footer.innerHTML = `
+                    <textarea class="tm-note" id="tmNote" placeholder="Optional resolution note"></textarea>
+                    <button class="btn btn-primary" id="tmResolve">Resolve</button>
+                    <div class="tm-msg" id="tmMsg"></div>
+                `;
+                footer.querySelector('#tmResolve').addEventListener('click', async (e) => {
+                    e.target.disabled = true; e.target.textContent = 'Resolving...';
+                    try {
+                        await updateTicketStatus(ticket.id, 'RESOLVED', footer.querySelector('#tmNote').value.trim() || undefined);
+                        closeTicketModal();
+                        onDone();
+                    } catch (err) {
+                        const msg = footer.querySelector('#tmMsg');
+                        msg.className = 'tm-msg err'; msg.textContent = err.message;
+                        e.target.disabled = false; e.target.textContent = 'Resolve';
+                    }
+                });
+            });
+        }
+
+        // ---- Dashboard: two SEPARATE calls, since the backend only returns
+        // either the unassigned pool OR tickets assigned to you per request,
+        // never both at once (see note in chat) ----
+        async function loadDashboard() {
+            const unassignedBody = document.getElementById('dashUnassignedBody');
+            const assignedBody = document.getElementById('dashAssignedBody');
+            try {
+                const [unassignedRes, assignedRes] = await Promise.all([
+                    getTickets({ unassigned: 1, per_page: 6 }),
+                    getTickets({ per_page: 100 }),
+                ]);
+                const unassigned = unassignedRes.tickets;
+                const mine = assignedRes.tickets;
+                const mineActive = mine.filter(t => t.status !== 'RESOLVED' && t.status !== 'CLOSED');
+                const resolvedThisMonth = mine.filter(t => t.status === 'RESOLVED' && isSameMonth(t.resolvedAt));
+
+                document.getElementById('statUnassigned').textContent = unassignedRes.pagination.total;
+                document.getElementById('statAssigned').textContent = mineActive.length;
+                document.getElementById('statResolvedMonth').textContent = resolvedThisMonth.length;
+
+                unassignedBody.innerHTML = unassigned.length ? unassigned.map(t => `
+                    <tr class="clickable-row" data-open-unassigned="${escapeHtml(t.id)}">
+                        <td>#${escapeHtml(t.id)}</td>
+                        <td>${escapeHtml(t.subject)}</td>
+                        <td><span class="priority-badge ${prioritySlug(t.priority)}">${priorityLabel(t.priority)}</span></td>
+                    </tr>
+                `).join('') : '<tr class="empty-row"><td colspan="3">No unassigned tickets right now.</td></tr>';
+
+                const mineRecent = mineActive.slice(0, 6);
+                assignedBody.innerHTML = mineRecent.length ? mineRecent.map(t => `
+                    <tr class="clickable-row" data-open-assigned="${escapeHtml(t.id)}">
+                        <td>#${escapeHtml(t.id)}</td>
+                        <td>${escapeHtml(t.subject)}</td>
+                        <td><span class="status-badge ${statusSlug(t.status)}">${statusLabel(t.status)}</span></td>
+                    </tr>
+                `).join('') : '<tr class="empty-row"><td colspan="3">Nothing assigned to you right now.</td></tr>';
+            } catch (err) {
+                unassignedBody.innerHTML = `<tr class="empty-row"><td colspan="3">${escapeHtml(err.message)}</td></tr>`;
+                assignedBody.innerHTML = `<tr class="empty-row"><td colspan="3">${escapeHtml(err.message)}</td></tr>`;
+            }
+        }
+
+        // ---- Open Tickets tab (full unassigned pool) ----
+        async function loadOpenTickets() {
+            const tbody = document.getElementById('openBody');
+            tbody.innerHTML = '<tr class="empty-row"><td colspan="5">Loading...</td></tr>';
+            try {
+                const priority = document.getElementById('openPriorityFilter').value;
+                const { tickets } = await getTickets({ unassigned: 1, per_page: 100, priority });
+                tbody.innerHTML = tickets.length ? tickets.map(t => `
+                    <tr class="clickable-row" data-open-unassigned="${escapeHtml(t.id)}">
+                        <td>#${escapeHtml(t.id)}</td>
+                        <td>${escapeHtml(t.subject)}</td>
+                        <td>${escapeHtml(t.category?.name ?? '—')}</td>
+                        <td><span class="priority-badge ${prioritySlug(t.priority)}">${priorityLabel(t.priority)}</span></td>
+                        <td>${escapeHtml(t.timeAgo || '')}</td>
+                    </tr>
+                `).join('') : '<tr class="empty-row"><td colspan="5">No unassigned tickets match this filter.</td></tr>';
+            } catch (err) {
+                tbody.innerHTML = `<tr class="empty-row"><td colspan="5">${escapeHtml(err.message)}</td></tr>`;
+            }
+        }
+        document.getElementById('openPriorityFilter').addEventListener('change', loadOpenTickets);
+
+        // ---- My Queue tab (full assigned-to-me list) ----
+        async function loadQueue() {
+            const tbody = document.getElementById('queueBody');
+            tbody.innerHTML = '<tr class="empty-row"><td colspan="5">Loading...</td></tr>';
+            try {
+                const status = document.getElementById('queueStatusFilter').value;
+                const { tickets } = await getTickets({ per_page: 100, status });
+                tbody.innerHTML = tickets.length ? tickets.map(t => `
+                    <tr class="clickable-row" data-open-assigned="${escapeHtml(t.id)}">
+                        <td>#${escapeHtml(t.id)}</td>
+                        <td>${escapeHtml(t.subject)}</td>
+                        <td><span class="priority-badge ${prioritySlug(t.priority)}">${priorityLabel(t.priority)}</span></td>
+                        <td><span class="status-badge ${statusSlug(t.status)}">${statusLabel(t.status)}</span></td>
+                        <td>${escapeHtml(t.timeAgo || '')}</td>
+                    </tr>
+                `).join('') : '<tr class="empty-row"><td colspan="5">Nothing here yet.</td></tr>';
+            } catch (err) {
+                tbody.innerHTML = `<tr class="empty-row"><td colspan="5">${escapeHtml(err.message)}</td></tr>`;
+            }
+        }
+        document.getElementById('queueStatusFilter').addEventListener('change', loadQueue);
+
+        // Delegate row clicks (dashboard + both full-list tabs) via data attributes.
+        document.addEventListener('click', (e) => {
+            const un = e.target.closest('[data-open-unassigned]');
+            if (un) { openUnassignedTicket(un.dataset.openUnassigned, refreshCurrentTab); return; }
+            const as = e.target.closest('[data-open-assigned]');
+            if (as) { openAssignedTicket(as.dataset.openAssigned, refreshCurrentTab); return; }
+        });
+        function refreshCurrentTab() {
+            const active = document.querySelector('.tab-panel.active').id.replace('tab-', '');
+            switchTab(active);
+        }
+
+        loadDashboard();
+        // Backend says something changed (a ticket assigned/accepted/resolved,
+        // a new one submitted) -> just reload whatever tab is on screen rather
+        // than trying to patch the DOM from the alert payload.
+        startLiveUpdates(refreshCurrentTab);
+    </script>
+</body>
+</html>
