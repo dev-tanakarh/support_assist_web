@@ -11,6 +11,7 @@
 // with `php -S localhost:8080 -t public` too, or add CORS headers server-side.
 
 const API_BASE_URL = 'http://192.168.18.10:8080/api';
+const BACKEND_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, '');
 
 const TOKEN_KEY = 'sa_accessToken';
 const REFRESH_KEY = 'sa_refreshToken';
@@ -128,6 +129,44 @@ async function tryRefresh() {
     } catch {
         return false;
     }
+}
+
+export function resolveTicketAttachmentUrl(attachmentUrl) {
+    if (typeof attachmentUrl !== 'string' || !attachmentUrl.trim()) return null;
+    try {
+        const url = new URL(attachmentUrl.trim(), `${BACKEND_BASE_URL}/`);
+        return ['http:', 'https:'].includes(url.protocol) ? url.href : null;
+    } catch {
+        return null;
+    }
+}
+
+export async function fetchTicketAttachment(attachmentUrl) {
+    const url = resolveTicketAttachmentUrl(attachmentUrl);
+    if (!url) throw new Error('Attachment image unavailable.');
+
+    const sameBackend = new URL(url).origin === new URL(BACKEND_BASE_URL).origin;
+    const fetchImage = () => {
+        const headers = {};
+        const token = sameBackend ? getAccessToken() : null;
+        if (token) headers.Authorization = `Bearer ${token}`;
+        return fetch(url, { headers });
+    };
+
+    let response;
+    try {
+        response = await fetchImage();
+        if (response.status === 401 && sameBackend && getRefreshToken() && await tryRefresh()) {
+            response = await fetchImage();
+        }
+    } catch {
+        throw new Error('Attachment image unavailable.');
+    }
+
+    if (!response.ok || !response.headers.get('content-type')?.toLowerCase().startsWith('image/')) {
+        throw new Error('Attachment image unavailable.');
+    }
+    return URL.createObjectURL(await response.blob());
 }
 
 // ---------- 1. Authentication ----------

@@ -5,6 +5,7 @@
 // per role.
 
 import { getTicket, statusSlug, prioritySlug, escapeHtml, timeAgo } from './api.js';
+import { renderTicketAttachment, watchTicketAttachments } from './ticket-attachments.js';
 
 let root = null;
 
@@ -107,7 +108,7 @@ function renderBody(t) {
             ${t.isOverdue ? '<span class="status-badge open" style="background:rgba(239,68,68,0.2); color:#ef4444;">Overdue</span>' : ''}
         </div>
 
-        ${t.attachmentUrl ? `<div class="tm-attachment"><img src="${escapeHtml(t.attachmentUrl)}" alt="Ticket attachment"></div>` : ''}
+        ${renderTicketAttachment(t.attachmentUrl, 'detail')}
 
         <div class="tm-desc">${escapeHtml(t.description)}</div>
 
@@ -134,7 +135,8 @@ function renderBody(t) {
  *   buttons in the footer. `reopen()` re-fetches and re-renders in place
  *   (call it after an action succeeds, e.g. after assigning a technician).
  */
-export async function openTicketModal(ticketId, renderFooter) {
+export async function openTicketModal(ticketId, renderFooter, fallbackTicket = null) {
+    watchTicketAttachments();
     const el = ensureRoot();
     el.classList.add('open');
     const body = el.querySelector('.tm-body');
@@ -143,7 +145,13 @@ export async function openTicketModal(ticketId, renderFooter) {
     footer.innerHTML = '';
 
     try {
-        const ticket = await getTicket(ticketId);
+        let ticket;
+        try {
+            ticket = await getTicket(ticketId);
+        } catch (err) {
+            if (!fallbackTicket) throw err;
+            ticket = fallbackTicket;
+        }
         body.innerHTML = renderBody(ticket);
         if (renderFooter) {
             renderFooter(footer, ticket, () => openTicketModal(ticketId, renderFooter));

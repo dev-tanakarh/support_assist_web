@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HelpDesk - Technician Dashboard</title>
+    <title>SupportAssist - Technician Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -71,16 +71,22 @@
         .row { display: flex; gap: 20px; flex-wrap: wrap; } .col-50 { flex: 1; min-width: 300px; }
         .empty-row td { text-align: center; color: var(--text-muted); padding: 24px 0; }
         .form-control { padding: 8px 10px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; color: #fff; font-size: 13px; font-family: inherit; }
+        .profile-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1px; background: var(--border-color); border: 1px solid var(--border-color); border-radius: var(--radius); overflow: hidden; }
+        .profile-field { background: var(--bg-card); padding: 18px 20px; }
+        .profile-field h3 { color: var(--text-muted); font-size: 11px; font-weight: 500; text-transform: uppercase; margin-bottom: 7px; }
+        .profile-field p { font-size: 14px; overflow-wrap: anywhere; }
     </style>
 </head>
 <body>
 
     <aside class="sidebar">
-        <div class="logo"> <i class="fas fa-headset"></i> <h1>HelpDesk</h1> </div>
+        <div class="logo"> <i class="fas fa-headset"></i> <h1>SupportAssist</h1> </div>
         <nav class="nav-menu">
             <button class="nav-item active" data-tab="dashboard"><i class="fas fa-house"></i> Dashboard</button>
             <button class="nav-item" data-tab="open"><i class="fas fa-list-check"></i> Open Tickets</button>
             <button class="nav-item" data-tab="queue"><i class="fas fa-user-gear"></i> My Queue</button>
+                    <button class="nav-item" data-tab="resolved"><i class="fas fa-circle-check"></i> Resolved Tickets</button>
+                    <button class="nav-item" data-tab="profile"><i class="fas fa-user"></i> Profile</button>
         </nav>
     </aside>
 
@@ -159,16 +165,43 @@
                 </div>
             </div>
 
+            <!-- ===== RESOLVED TICKETS ===== -->
+            <div class="tab-panel" id="tab-resolved">
+                <div class="table-container">
+                    <div class="table-header"><h3>Tickets Resolved by Me</h3></div>
+                    <table>
+                        <thead><tr><th>ID</th><th>Subject</th><th>Priority</th><th>Resolved</th></tr></thead>
+                        <tbody id="resolvedBody"><tr class="empty-row"><td colspan="4">Loading...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ===== PROFILE ===== -->
+            <div class="tab-panel" id="tab-profile">
+                <div class="table-container">
+                    <div class="table-header"><h3>Technician Profile</h3></div>
+                    <div class="profile-grid">
+                        <div class="profile-field"><h3>Name</h3><p id="profileName">Loading...</p></div>
+                        <div class="profile-field"><h3>Email</h3><p id="profileEmail">Loading...</p></div>
+                        <div class="profile-field"><h3>Phone</h3><p id="profilePhone">—</p></div>
+                        <div class="profile-field"><h3>Account Type</h3><p id="profileType">Technician</p></div>
+                    </div>
+                </div>
+            </div>
+
         </section>
     </main>
 
     <script type="module">
         import {
-            isLoggedIn, getCurrentUser, logout, getTickets,
+            isLoggedIn, getCurrentUser, logout, getProfile, getTickets,
             acceptTicket, updateTicketStatus, statusSlug, prioritySlug, escapeHtml,
         } from './api.js';
         import { openTicketModal, closeTicketModal } from './ticket-modal.js';
         import { startLiveUpdates } from './live-updates.js';
+        import { renderTicketAttachment, watchTicketAttachments } from './ticket-attachments.js';
+
+        watchTicketAttachments();
 
         const user = getCurrentUser();
         if (!isLoggedIn() || !user || user.userType !== 'TECHNICIAN') {
@@ -190,7 +223,7 @@
         }
 
         // ---- tabs ----
-        const TAB_TITLES = { dashboard: 'Technician Dashboard', open: 'Open Tickets', queue: 'My Queue' };
+        const TAB_TITLES = { dashboard: 'Technician Dashboard', open: 'Open Tickets', queue: 'My Queue', resolved: 'Resolved Tickets', profile: 'Profile' };
         document.querySelectorAll('.nav-item[data-tab]').forEach(btn => {
             btn.addEventListener('click', () => switchTab(btn.dataset.tab));
         });
@@ -201,9 +234,12 @@
             if (tab === 'dashboard') loadDashboard();
             if (tab === 'open') loadOpenTickets();
             if (tab === 'queue') loadQueue();
+            if (tab === 'resolved') loadResolvedTickets();
+            if (tab === 'profile') loadProfile();
         }
 
         // ---- ticket modal footers ----
+        const unassignedTicketCache = new Map();
         function openUnassignedTicket(id, onDone) {
             openTicketModal(id, (footer, ticket) => {
                 footer.innerHTML = `
@@ -222,7 +258,7 @@
                         e.target.disabled = false; e.target.textContent = 'Accept Job';
                     }
                 });
-            });
+            }, unassignedTicketCache.get(String(id)));
         }
         function openAssignedTicket(id, onDone) {
             openTicketModal(id, (footer, ticket) => {
@@ -263,6 +299,7 @@
                 ]);
                 const unassigned = unassignedRes.tickets;
                 const mine = assignedRes.tickets;
+                unassigned.forEach(ticket => unassignedTicketCache.set(String(ticket.id), ticket));
                 const mineActive = mine.filter(t => t.status !== 'RESOLVED' && t.status !== 'CLOSED');
                 const resolvedThisMonth = mine.filter(t => t.status === 'RESOLVED' && isSameMonth(t.resolvedAt));
 
@@ -273,7 +310,7 @@
                 unassignedBody.innerHTML = unassigned.length ? unassigned.map(t => `
                     <tr class="clickable-row" data-open-unassigned="${escapeHtml(t.id)}">
                         <td>#${escapeHtml(t.id)}</td>
-                        <td>${escapeHtml(t.subject)}</td>
+                        <td><div class="ticket-subject-cell">${renderTicketAttachment(t.attachmentUrl)}<span>${escapeHtml(t.subject)}</span></div></td>
                         <td><span class="priority-badge ${prioritySlug(t.priority)}">${priorityLabel(t.priority)}</span></td>
                     </tr>
                 `).join('') : '<tr class="empty-row"><td colspan="3">No unassigned tickets right now.</td></tr>';
@@ -282,7 +319,7 @@
                 assignedBody.innerHTML = mineRecent.length ? mineRecent.map(t => `
                     <tr class="clickable-row" data-open-assigned="${escapeHtml(t.id)}">
                         <td>#${escapeHtml(t.id)}</td>
-                        <td>${escapeHtml(t.subject)}</td>
+                        <td><div class="ticket-subject-cell">${renderTicketAttachment(t.attachmentUrl)}<span>${escapeHtml(t.subject)}</span></div></td>
                         <td><span class="status-badge ${statusSlug(t.status)}">${statusLabel(t.status)}</span></td>
                     </tr>
                 `).join('') : '<tr class="empty-row"><td colspan="3">Nothing assigned to you right now.</td></tr>';
@@ -299,10 +336,11 @@
             try {
                 const priority = document.getElementById('openPriorityFilter').value;
                 const { tickets } = await getTickets({ unassigned: 1, per_page: 100, priority });
+                tickets.forEach(ticket => unassignedTicketCache.set(String(ticket.id), ticket));
                 tbody.innerHTML = tickets.length ? tickets.map(t => `
                     <tr class="clickable-row" data-open-unassigned="${escapeHtml(t.id)}">
                         <td>#${escapeHtml(t.id)}</td>
-                        <td>${escapeHtml(t.subject)}</td>
+                        <td><div class="ticket-subject-cell">${renderTicketAttachment(t.attachmentUrl)}<span>${escapeHtml(t.subject)}</span></div></td>
                         <td>${escapeHtml(t.category?.name ?? '—')}</td>
                         <td><span class="priority-badge ${prioritySlug(t.priority)}">${priorityLabel(t.priority)}</span></td>
                         <td>${escapeHtml(t.timeAgo || '')}</td>
@@ -324,7 +362,7 @@
                 tbody.innerHTML = tickets.length ? tickets.map(t => `
                     <tr class="clickable-row" data-open-assigned="${escapeHtml(t.id)}">
                         <td>#${escapeHtml(t.id)}</td>
-                        <td>${escapeHtml(t.subject)}</td>
+                        <td><div class="ticket-subject-cell">${renderTicketAttachment(t.attachmentUrl)}<span>${escapeHtml(t.subject)}</span></div></td>
                         <td><span class="priority-badge ${prioritySlug(t.priority)}">${priorityLabel(t.priority)}</span></td>
                         <td><span class="status-badge ${statusSlug(t.status)}">${statusLabel(t.status)}</span></td>
                         <td>${escapeHtml(t.timeAgo || '')}</td>
@@ -335,6 +373,50 @@
             }
         }
         document.getElementById('queueStatusFilter').addEventListener('change', loadQueue);
+
+        async function loadResolvedTickets() {
+            const tbody = document.getElementById('resolvedBody');
+            tbody.innerHTML = '<tr class="empty-row"><td colspan="4">Loading...</td></tr>';
+            try {
+                const firstPage = await getTickets({ per_page: 100, page: 1, status: 'RESOLVED' });
+                const tickets = firstPage.tickets.filter(ticket => ticket.status === 'RESOLVED');
+                const totalPages = Math.ceil((firstPage.pagination?.total ?? firstPage.tickets.length) / 100);
+                for (let page = 2; page <= totalPages; page += 1) {
+                    const result = await getTickets({ per_page: 100, page, status: 'RESOLVED' });
+                    tickets.push(...result.tickets.filter(ticket => ticket.status === 'RESOLVED'));
+                }
+                tbody.innerHTML = tickets.length ? tickets.map(ticket => `
+                    <tr class="clickable-row" data-open-assigned="${escapeHtml(ticket.id)}">
+                        <td>#${escapeHtml(ticket.id)}</td>
+                        <td><div class="ticket-subject-cell">${renderTicketAttachment(ticket.attachmentUrl)}<span>${escapeHtml(ticket.subject)}</span></div></td>
+                        <td><span class="priority-badge ${prioritySlug(ticket.priority)}">${priorityLabel(ticket.priority)}</span></td>
+                        <td>${escapeHtml(ticket.resolvedAt ? new Date(ticket.resolvedAt).toLocaleDateString() : '—')}</td>
+                    </tr>
+                `).join('') : '<tr class="empty-row"><td colspan="4">You have not resolved any tickets yet.</td></tr>';
+            } catch (err) {
+                tbody.innerHTML = `<tr class="empty-row"><td colspan="4">${escapeHtml(err.message)}</td></tr>`;
+            }
+        }
+
+        async function loadProfile() {
+            const profileFields = {
+                profileName: user.name || '—',
+                profileEmail: user.email || '—',
+                profilePhone: user.phone || '—',
+                profileType: 'Technician',
+            };
+            try {
+                const profile = await getProfile();
+                profileFields.profileName = profile.name || profileFields.profileName;
+                profileFields.profileEmail = profile.email || profileFields.profileEmail;
+                profileFields.profilePhone = profile.phone || profileFields.profilePhone;
+            } catch {
+                // Keep the signed-in user's available profile details visible.
+            }
+            Object.entries(profileFields).forEach(([id, value]) => {
+                document.getElementById(id).textContent = value;
+            });
+        }
 
         // Delegate row clicks (dashboard + both full-list tabs) via data attributes.
         document.addEventListener('click', (e) => {

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HelpDesk - Admin Dashboard</title>
+    <title>SupportAssist - Admin Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -93,7 +93,7 @@
 <body>
 
     <aside class="sidebar">
-        <div class="logo"> <i class="fas fa-headset"></i> <h1>HelpDesk</h1> </div>
+        <div class="logo"> <i class="fas fa-headset"></i> <h1>SupportAssist</h1> </div>
         <nav class="nav-menu">
             <button class="nav-item active" data-tab="dashboard"><i class="fas fa-house"></i> Dashboard</button>
             <button class="nav-item" data-tab="tickets"><i class="fas fa-ticket"></i> Tickets</button>
@@ -259,6 +259,9 @@
         } from './api.js';
         import { openTicketModal, closeTicketModal } from './ticket-modal.js';
         import { startLiveUpdates } from './live-updates.js';
+        import { renderTicketAttachment, watchTicketAttachments } from './ticket-attachments.js';
+
+        watchTicketAttachments();
 
         const user = getCurrentUser();
         if (!isLoggedIn() || !user || user.userType !== 'ADMIN') {
@@ -364,7 +367,7 @@
                 tbody.innerHTML = tickets.length ? tickets.map(t => `
                     <tr class="clickable-row" data-open-ticket="${escapeHtml(t.id)}">
                         <td>#${escapeHtml(t.id)}</td>
-                        <td>${escapeHtml(t.subject)}</td>
+                        <td><div class="ticket-subject-cell">${renderTicketAttachment(t.attachmentUrl)}<span>${escapeHtml(t.subject)}</span></div></td>
                         <td>${escapeHtml(t.reporter?.name ?? '—')}</td>
                         <td><span class="status-badge ${statusSlug(t.status)}">${statusLabel(t.status)}</span></td>
                     </tr>
@@ -390,7 +393,7 @@
                 tbody.innerHTML = tickets.length ? tickets.map(t => `
                     <tr class="clickable-row" data-open-ticket="${escapeHtml(t.id)}">
                         <td>#${escapeHtml(t.id)}</td>
-                        <td>${escapeHtml(t.subject)}</td>
+                        <td><div class="ticket-subject-cell">${renderTicketAttachment(t.attachmentUrl)}<span>${escapeHtml(t.subject)}</span></div></td>
                         <td>${escapeHtml(t.reporter?.name ?? '—')}</td>
                         <td>${escapeHtml(t.assignedTechnician?.name ?? '—')}</td>
                         <td><span class="priority-badge ${prioritySlug(t.priority)}">${priorityLabel(t.priority)}</span></td>
