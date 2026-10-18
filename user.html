@@ -183,17 +183,10 @@
                 </div>
 
                 <div class="profile-card">
-                    <div class="profile-img-wrapper">
-                        <img src="https://ui-avatars.com/api/?name=U&background=random" id="userProfileImage" alt="Profile">
-                        <div class="upload-overlay" onclick="document.getElementById('profileUpload').click()">
-                            <i class="fas fa-camera"></i>
-                            <input type="file" id="profileUpload" style="display:none" accept="image/*">
-                        </div>
-                    </div>
+                    <div id="userProfilePicture"></div>
                     <div>
                         <h3 id="profileName">Loading...</h3>
                         <p style="color:var(--text-muted)" id="profileEmail"></p>
-                        <p class="muted" id="profileNote" style="margin-top:6px;"></p>
                     </div>
                 </div>
             </div>
@@ -252,7 +245,7 @@
         } from './api.js';
         import { openTicketModal } from './ticket-modal.js';
         import { startLiveUpdates } from './live-updates.js';
-        import { renderTicketAttachment, watchTicketAttachments } from './ticket-attachments.js';
+        import { renderProfilePicture, renderTicketAttachment, watchTicketAttachments } from './ticket-attachments.js';
 
         watchTicketAttachments();
 
@@ -342,18 +335,17 @@
         async function loadProfile() {
             try {
                 const p = await getProfile();
-                document.getElementById('profileName').textContent = p.name;
-                document.getElementById('profileEmail').textContent = p.email;
-                document.getElementById('userProfileImage').src = `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=random`;
-                document.getElementById('profileNote').textContent = 'Photo preview only — the API has no avatar upload endpoint yet, so it won\'t be saved.';
+                document.getElementById('profileName').textContent = p.name || user.name || 'Unknown';
+                document.getElementById('profileEmail').textContent = p.email || user.email || '';
+                document.getElementById('userProfilePicture').innerHTML = renderProfilePicture(p);
+                watchTicketAttachments();
             } catch (err) {
                 document.getElementById('profileName').textContent = user.name || 'Unknown';
                 document.getElementById('profileEmail').textContent = user.email || '';
+                document.getElementById('userProfilePicture').innerHTML = renderProfilePicture(user);
+                watchTicketAttachments();
             }
         }
-        document.getElementById('profileUpload').addEventListener('change', function () {
-            if (this.files[0]) document.getElementById('userProfileImage').src = URL.createObjectURL(this.files[0]);
-        });
 
         // ---- categories ----
         async function loadCategories() {
@@ -381,7 +373,7 @@
                 tbody.innerHTML = recent.length ? recent.map(t => `
                     <tr class="clickable-row" data-open-ticket="${escapeHtml(t.id)}">
                         <td>#${escapeHtml(t.id)}</td>
-                        <td><div class="ticket-subject-cell">${renderTicketAttachment(t.attachmentUrl)}<span>${escapeHtml(t.subject)}</span></div></td>
+                        <td><div class="ticket-subject-cell">${renderTicketAttachment(t.attachmentUrl, 'thumbnail', t.attachmentThumbnailUrl)}<span>${escapeHtml(t.subject)}</span></div></td>
                         <td><span class="status-badge ${statusSlug(t.status)}">${statusLabel(t.status)}</span></td>
                     </tr>
                 `).join('') : '<tr class="empty-row"><td colspan="3">No tickets yet — create your first one.</td></tr>';
@@ -403,7 +395,7 @@
                 tbody.innerHTML = tickets.length ? tickets.map(t => `
                     <tr class="clickable-row" data-open-ticket="${escapeHtml(t.id)}">
                         <td>#${escapeHtml(t.id)}</td>
-                        <td><div class="ticket-subject-cell">${renderTicketAttachment(t.attachmentUrl)}<span>${escapeHtml(t.subject)}</span></div></td>
+                        <td><div class="ticket-subject-cell">${renderTicketAttachment(t.attachmentUrl, 'thumbnail', t.attachmentThumbnailUrl)}<span>${escapeHtml(t.subject)}</span></div></td>
                         <td><span class="priority-badge ${t.priority.toLowerCase()}">${priorityLabel(t.priority)}</span></td>
                         <td><span class="status-badge ${statusSlug(t.status)}">${statusLabel(t.status)}</span></td>
                         <td>${escapeHtml(t.timeAgo || '')}</td>

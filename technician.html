@@ -180,9 +180,11 @@
             <div class="tab-panel" id="tab-profile">
                 <div class="table-container">
                     <div class="table-header"><h3>Technician Profile</h3></div>
+                    <div class="profile-card" style="margin:0 0 20px;">
+                        <div id="technicianProfilePicture"></div>
+                        <div><h3 id="profileName">Loading...</h3><p id="profileEmail" style="color:var(--text-muted);"></p></div>
+                    </div>
                     <div class="profile-grid">
-                        <div class="profile-field"><h3>Name</h3><p id="profileName">Loading...</p></div>
-                        <div class="profile-field"><h3>Email</h3><p id="profileEmail">Loading...</p></div>
                         <div class="profile-field"><h3>Phone</h3><p id="profilePhone">—</p></div>
                         <div class="profile-field"><h3>Account Type</h3><p id="profileType">Technician</p></div>
                     </div>
@@ -199,7 +201,7 @@
         } from './api.js';
         import { openTicketModal, closeTicketModal } from './ticket-modal.js';
         import { startLiveUpdates } from './live-updates.js';
-        import { renderTicketAttachment, watchTicketAttachments } from './ticket-attachments.js';
+        import { renderProfilePicture, renderTicketAttachment, watchTicketAttachments } from './ticket-attachments.js';
 
         watchTicketAttachments();
 
@@ -310,7 +312,7 @@
                 unassignedBody.innerHTML = unassigned.length ? unassigned.map(t => `
                     <tr class="clickable-row" data-open-unassigned="${escapeHtml(t.id)}">
                         <td>#${escapeHtml(t.id)}</td>
-                        <td><div class="ticket-subject-cell">${renderTicketAttachment(t.attachmentUrl)}<span>${escapeHtml(t.subject)}</span></div></td>
+                        <td><div class="ticket-subject-cell">${renderTicketAttachment(t.attachmentUrl, 'thumbnail', t.attachmentThumbnailUrl)}<span>${escapeHtml(t.subject)}</span></div></td>
                         <td><span class="priority-badge ${prioritySlug(t.priority)}">${priorityLabel(t.priority)}</span></td>
                     </tr>
                 `).join('') : '<tr class="empty-row"><td colspan="3">No unassigned tickets right now.</td></tr>';
@@ -319,7 +321,7 @@
                 assignedBody.innerHTML = mineRecent.length ? mineRecent.map(t => `
                     <tr class="clickable-row" data-open-assigned="${escapeHtml(t.id)}">
                         <td>#${escapeHtml(t.id)}</td>
-                        <td><div class="ticket-subject-cell">${renderTicketAttachment(t.attachmentUrl)}<span>${escapeHtml(t.subject)}</span></div></td>
+                        <td><div class="ticket-subject-cell">${renderTicketAttachment(t.attachmentUrl, 'thumbnail', t.attachmentThumbnailUrl)}<span>${escapeHtml(t.subject)}</span></div></td>
                         <td><span class="status-badge ${statusSlug(t.status)}">${statusLabel(t.status)}</span></td>
                     </tr>
                 `).join('') : '<tr class="empty-row"><td colspan="3">Nothing assigned to you right now.</td></tr>';
@@ -340,7 +342,7 @@
                 tbody.innerHTML = tickets.length ? tickets.map(t => `
                     <tr class="clickable-row" data-open-unassigned="${escapeHtml(t.id)}">
                         <td>#${escapeHtml(t.id)}</td>
-                        <td><div class="ticket-subject-cell">${renderTicketAttachment(t.attachmentUrl)}<span>${escapeHtml(t.subject)}</span></div></td>
+                        <td><div class="ticket-subject-cell">${renderTicketAttachment(t.attachmentUrl, 'thumbnail', t.attachmentThumbnailUrl)}<span>${escapeHtml(t.subject)}</span></div></td>
                         <td>${escapeHtml(t.category?.name ?? '—')}</td>
                         <td><span class="priority-badge ${prioritySlug(t.priority)}">${priorityLabel(t.priority)}</span></td>
                         <td>${escapeHtml(t.timeAgo || '')}</td>
@@ -362,7 +364,7 @@
                 tbody.innerHTML = tickets.length ? tickets.map(t => `
                     <tr class="clickable-row" data-open-assigned="${escapeHtml(t.id)}">
                         <td>#${escapeHtml(t.id)}</td>
-                        <td><div class="ticket-subject-cell">${renderTicketAttachment(t.attachmentUrl)}<span>${escapeHtml(t.subject)}</span></div></td>
+                        <td><div class="ticket-subject-cell">${renderTicketAttachment(t.attachmentUrl, 'thumbnail', t.attachmentThumbnailUrl)}<span>${escapeHtml(t.subject)}</span></div></td>
                         <td><span class="priority-badge ${prioritySlug(t.priority)}">${priorityLabel(t.priority)}</span></td>
                         <td><span class="status-badge ${statusSlug(t.status)}">${statusLabel(t.status)}</span></td>
                         <td>${escapeHtml(t.timeAgo || '')}</td>
@@ -388,7 +390,7 @@
                 tbody.innerHTML = tickets.length ? tickets.map(ticket => `
                     <tr class="clickable-row" data-open-assigned="${escapeHtml(ticket.id)}">
                         <td>#${escapeHtml(ticket.id)}</td>
-                        <td><div class="ticket-subject-cell">${renderTicketAttachment(ticket.attachmentUrl)}<span>${escapeHtml(ticket.subject)}</span></div></td>
+                        <td><div class="ticket-subject-cell">${renderTicketAttachment(ticket.attachmentUrl, 'thumbnail', ticket.attachmentThumbnailUrl)}<span>${escapeHtml(ticket.subject)}</span></div></td>
                         <td><span class="priority-badge ${prioritySlug(ticket.priority)}">${priorityLabel(ticket.priority)}</span></td>
                         <td>${escapeHtml(ticket.resolvedAt ? new Date(ticket.resolvedAt).toLocaleDateString() : '—')}</td>
                     </tr>
@@ -410,9 +412,12 @@
                 profileFields.profileName = profile.name || profileFields.profileName;
                 profileFields.profileEmail = profile.email || profileFields.profileEmail;
                 profileFields.profilePhone = profile.phone || profileFields.profilePhone;
+                document.getElementById('technicianProfilePicture').innerHTML = renderProfilePicture(profile);
             } catch {
                 // Keep the signed-in user's available profile details visible.
+                document.getElementById('technicianProfilePicture').innerHTML = renderProfilePicture(user);
             }
+            watchTicketAttachments();
             Object.entries(profileFields).forEach(([id, value]) => {
                 document.getElementById(id).textContent = value;
             });

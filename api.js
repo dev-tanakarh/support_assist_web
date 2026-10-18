@@ -10,7 +10,7 @@
 // CORS error, not a 401/404. Easiest fix for local dev: serve these HTML files
 // with `php -S localhost:8080 -t public` too, or add CORS headers server-side.
 
-const API_BASE_URL = 'http://192.168.18.10:8080/api';
+const API_BASE_URL = 'http://192.168.0.175:8080/api';
 const BACKEND_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, '');
 
 const TOKEN_KEY = 'sa_accessToken';
@@ -187,6 +187,11 @@ export async function login(email, password) {
 
 export const getProfile = () => request('/profile');
 export const updateProfile = (fields) => request('/profile', { method: 'PATCH', body: fields });
+export const uploadProfileAvatar = (file) => {
+    const form = new FormData();
+    form.append('avatar', file);
+    return request('/profile/avatar', { method: 'POST', body: form, isForm: true });
+};
 
 // ---------- 3. Categories ----------
 

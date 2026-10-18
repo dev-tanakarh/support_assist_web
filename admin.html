@@ -100,6 +100,7 @@
             <button class="nav-item" data-tab="users"><i class="fas fa-users"></i> Users</button>
             <button class="nav-item" data-tab="technicians"><i class="fas fa-user-tie"></i> Technicians</button>
             <button class="nav-item" data-tab="reports"><i class="fas fa-chart-pie"></i> Reports</button>
+            <button class="nav-item" data-tab="profile"><i class="fas fa-user"></i> Profile</button>
         </nav>
     </aside>
 
@@ -248,18 +249,29 @@
                 </div>
             </div>
 
+            <!-- ===== PROFILE ===== -->
+            <div class="tab-panel" id="tab-profile">
+                <div class="table-container">
+                    <div class="table-header"><h3>Admin Profile</h3></div>
+                    <div style="display:flex; align-items:center; gap:22px; flex-wrap:wrap;">
+                        <div id="adminProfilePicture"></div>
+                        <div><h3 id="adminProfileName">Loading...</h3><p id="adminProfileEmail" style="color:var(--text-muted); margin-top:5px;"></p></div>
+                    </div>
+                </div>
+            </div>
+
         </section>
     </main>
 
     <script type="module">
         import {
-            isLoggedIn, getCurrentUser, logout, getDashboard, getRecentTickets, getTickets,
+            isLoggedIn, getCurrentUser, logout, getDashboard, getRecentTickets, getTickets, getProfile,
             getUsers, createTechnician, deleteTechnician, assignTicket,
             statusSlug, prioritySlug, escapeHtml,
         } from './api.js';
         import { openTicketModal, closeTicketModal } from './ticket-modal.js';
         import { startLiveUpdates } from './live-updates.js';
-        import { renderTicketAttachment, watchTicketAttachments } from './ticket-attachments.js';
+        import { renderProfilePicture, renderTicketAttachment, watchTicketAttachments } from './ticket-attachments.js';
 
         watchTicketAttachments();
 
@@ -279,7 +291,7 @@
         function countFor(rows, key, field) { const r = (rows || []).find(x => x[field] === key); return r ? r.count : 0; }
 
         // ---- tabs ----
-        const TAB_TITLES = { dashboard: 'Admin Dashboard', tickets: 'Tickets', users: 'Users', technicians: 'Technicians', reports: 'Reports' };
+        const TAB_TITLES = { dashboard: 'Admin Dashboard', tickets: 'Tickets', users: 'Users', technicians: 'Technicians', reports: 'Reports', profile: 'Profile' };
         document.querySelectorAll('.nav-item[data-tab]').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
         document.querySelectorAll('[data-goto]').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.goto)));
         function switchTab(tab) {
@@ -291,6 +303,22 @@
             if (tab === 'users') loadUsersTab();
             if (tab === 'technicians') loadTechnicians();
             if (tab === 'reports') loadReports();
+            if (tab === 'profile') loadProfile();
+        }
+
+        async function loadProfile() {
+            const container = document.getElementById('adminProfilePicture');
+            try {
+                const profile = await getProfile();
+                document.getElementById('adminProfileName').textContent = profile.name || user.name || 'Unknown';
+                document.getElementById('adminProfileEmail').textContent = profile.email || user.email || '';
+                container.innerHTML = renderProfilePicture(profile);
+            } catch {
+                document.getElementById('adminProfileName').textContent = user.name || 'Unknown';
+                document.getElementById('adminProfileEmail').textContent = user.email || '';
+                container.innerHTML = renderProfilePicture(user);
+            }
+            watchTicketAttachments();
         }
 
         // ---- ticket detail modal, with the Assign Technician footer ----
@@ -367,7 +395,7 @@
                 tbody.innerHTML = tickets.length ? tickets.map(t => `
                     <tr class="clickable-row" data-open-ticket="${escapeHtml(t.id)}">
                         <td>#${escapeHtml(t.id)}</td>
-                        <td><div class="ticket-subject-cell">${renderTicketAttachment(t.attachmentUrl)}<span>${escapeHtml(t.subject)}</span></div></td>
+                        <td><div class="ticket-subject-cell">${renderTicketAttachment(t.attachmentUrl, 'thumbnail', t.attachmentThumbnailUrl)}<span>${escapeHtml(t.subject)}</span></div></td>
                         <td>${escapeHtml(t.reporter?.name ?? '—')}</td>
                         <td><span class="status-badge ${statusSlug(t.status)}">${statusLabel(t.status)}</span></td>
                     </tr>
@@ -393,7 +421,7 @@
                 tbody.innerHTML = tickets.length ? tickets.map(t => `
                     <tr class="clickable-row" data-open-ticket="${escapeHtml(t.id)}">
                         <td>#${escapeHtml(t.id)}</td>
-                        <td><div class="ticket-subject-cell">${renderTicketAttachment(t.attachmentUrl)}<span>${escapeHtml(t.subject)}</span></div></td>
+                        <td><div class="ticket-subject-cell">${renderTicketAttachment(t.attachmentUrl, 'thumbnail', t.attachmentThumbnailUrl)}<span>${escapeHtml(t.subject)}</span></div></td>
                         <td>${escapeHtml(t.reporter?.name ?? '—')}</td>
                         <td>${escapeHtml(t.assignedTechnician?.name ?? '—')}</td>
                         <td><span class="priority-badge ${prioritySlug(t.priority)}">${priorityLabel(t.priority)}</span></td>
