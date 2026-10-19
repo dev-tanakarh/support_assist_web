@@ -29,7 +29,8 @@
 
         .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
         .header { height: 70px; background-color: var(--bg-sidebar); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; padding: 0 30px; flex-shrink: 0; }
-        .header-left { display: flex; align-items: center; gap: 15px; } .header-left h2 { font-size: 18px; font-weight: 500; }
+        .header-left { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; } .header-left h2 { font-size: 18px; font-weight: 500; }
+        .header-role { color: var(--text-muted); font-size: 12px; }
         .header-right { display: flex; align-items: center; gap: 20px; }
         .search-box { background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 16px; display: flex; align-items: center; gap: 10px; color: var(--text-muted); width: 220px; }
         .search-box input { background: transparent; border: none; outline: none; color: #fff; width: 100%; font-size: 13px; }
@@ -92,7 +93,7 @@
 
     <main class="main-content">
         <header class="header">
-            <div class="header-left"><h2 id="pageTitle">Technician Dashboard</h2></div>
+            <div class="header-left"><h2 id="pageTitle">Technician Dashboard</h2><span class="header-role" id="pageRole" hidden></span></div>
             <div class="header-right">
                 <div class="search-box"><i class="fas fa-search"></i><input type="text" placeholder="Search tickets..." disabled title="Coming soon"></div>
                 <a href="#" id="logoutBtn" class="btn btn-outline" style="font-size:11px; text-decoration:none;">Logout</a>
@@ -230,13 +231,20 @@
 
         // ---- tabs ----
         const TAB_TITLES = { dashboard: 'Technician Dashboard', open: 'Open Tickets', queue: 'My Queue', resolved: 'Resolved Tickets', profile: 'Profile' };
+        const pageTitle = document.getElementById('pageTitle');
+        const pageRole = document.getElementById('pageRole');
+        pageTitle.textContent = `Hello, ${user.name || 'there'}`;
+        pageRole.textContent = user.userType.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, letter => letter.toUpperCase());
+        pageRole.hidden = false;
         document.querySelectorAll('.nav-item[data-tab]').forEach(btn => {
             btn.addEventListener('click', () => switchTab(btn.dataset.tab));
         });
         function switchTab(tab) {
             document.querySelectorAll('.nav-item[data-tab]').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
             document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === `tab-${tab}`));
-            document.getElementById('pageTitle').textContent = TAB_TITLES[tab];
+            pageTitle.textContent = tab === 'dashboard' ? `Hello, ${user.name || 'there'}` : TAB_TITLES[tab];
+            pageRole.textContent = user.userType.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, letter => letter.toUpperCase());
+            pageRole.hidden = tab !== 'dashboard';
             if (tab === 'dashboard') loadDashboard();
             if (tab === 'open') loadOpenTickets();
             if (tab === 'queue') loadQueue();
