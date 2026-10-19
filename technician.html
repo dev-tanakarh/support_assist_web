@@ -132,6 +132,7 @@
                 <div class="table-container">
                     <div class="table-header">
                         <h3>Unassigned Pool</h3>
+                        <input id="openSearch" class="form-control" type="search" placeholder="Search unassigned tickets" aria-label="Search unassigned tickets" style="max-width:240px;">
                         <select id="openPriorityFilter" class="form-control">
                             <option value="">All priorities</option>
                             <option value="HIGH">High</option>
@@ -143,6 +144,7 @@
                         <thead><tr><th>ID</th><th>Subject</th><th>Category</th><th>Priority</th><th>Created</th></tr></thead>
                         <tbody id="openBody"><tr class="empty-row"><td colspan="5">Loading...</td></tr></tbody>
                     </table>
+                    <div class="table-header" style="justify-content:flex-end;gap:12px;"><span id="openPageInfo" class="muted">Page 1</span><button id="openPrev" class="btn btn-outline" disabled>Previous</button><button id="openNext" class="btn btn-outline" disabled>Next</button></div>
                 </div>
             </div>
 
@@ -151,6 +153,7 @@
                 <div class="table-container">
                     <div class="table-header">
                         <h3>My Queue</h3>
+                        <input id="queueSearch" class="form-control" type="search" placeholder="Search my queue" aria-label="Search my queue" style="max-width:220px;">
                         <select id="queueStatusFilter" class="form-control">
                             <option value="">All statuses</option>
                             <option value="IN_PROGRESS">In Progress</option>
@@ -162,13 +165,14 @@
                         <thead><tr><th>ID</th><th>Subject</th><th>Priority</th><th>Status</th><th>Created</th></tr></thead>
                         <tbody id="queueBody"><tr class="empty-row"><td colspan="5">Loading...</td></tr></tbody>
                     </table>
+                    <div class="table-header" style="justify-content:flex-end;gap:12px;"><span id="queuePageInfo" class="muted">Page 1</span><button id="queuePrev" class="btn btn-outline" disabled>Previous</button><button id="queueNext" class="btn btn-outline" disabled>Next</button></div>
                 </div>
             </div>
 
             <!-- ===== RESOLVED TICKETS ===== -->
             <div class="tab-panel" id="tab-resolved">
                 <div class="table-container">
-                    <div class="table-header"><h3>Tickets Resolved by Me</h3></div>
+                    <div class="table-header"><h3>Tickets Resolved by Me</h3><span id="resolvedPageInfo" class="muted">Page 1</span><button id="resolvedPrev" class="btn btn-outline" disabled>Previous</button><button id="resolvedNext" class="btn btn-outline" disabled>Next</button></div>
                     <table>
                         <thead><tr><th>ID</th><th>Subject</th><th>Priority</th><th>Resolved</th></tr></thead>
                         <tbody id="resolvedBody"><tr class="empty-row"><td colspan="4">Loading...</td></tr></tbody>
@@ -196,7 +200,7 @@
 
     <script type="module">
         import {
-            isLoggedIn, getCurrentUser, logout, getProfile, getTickets,
+            isLoggedIn, getCurrentUser, logout, revokeSession, getProfile, getTickets,
             acceptTicket, updateTicketStatus, statusSlug, prioritySlug, escapeHtml,
         } from './api.js';
         import { openTicketModal, closeTicketModal } from './ticket-modal.js';
@@ -210,9 +214,9 @@
             window.location.href = 'login.html';
         }
 
-        document.getElementById('logoutBtn').addEventListener('click', (e) => {
+        document.getElementById('logoutBtn').addEventListener('click', async (e) => {
             e.preventDefault();
-            logout();
+            try { await revokeSession(); } catch { logout(); }
             window.location.href = 'login.html';
         });
 
@@ -295,19 +299,25 @@
             const unassignedBody = document.getElementById('dashUnassignedBody');
             const assignedBody = document.getElementById('dashAssignedBody');
             try {
-                const [unassignedRes, assignedRes] = await Promise.all([
+                const monthStart = new Date();
+                monthStart.setDate(1);
+                const resolvedAfter = `${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, '0')}-01`;
+                const [unassignedRes, openRes, progressRes, openRecent, progressRecent, resolvedMonthRes] = await Promise.all([
                     getTickets({ unassigned: 1, per_page: 6 }),
-                    getTickets({ per_page: 100 }),
+                    getTickets({ status: 'OPEN', per_page: 1 }),
+                    getTickets({ status: 'IN_PROGRESS', per_page: 1 }),
+                    getTickets({ status: 'OPEN', per_page: 6 }),
+                    getTickets({ status: 'IN_PROGRESS', per_page: 6 }),
+                    getTickets({ status: 'RESOLVED', resolved_after: resolvedAfter, per_page: 1 }),
                 ]);
                 const unassigned = unassignedRes.tickets;
-                const mine = assignedRes.tickets;
                 unassigned.forEach(ticket => unassignedTicketCache.set(String(ticket.id), ticket));
-                const mineActive = mine.filter(t => t.status !== 'RESOLVED' && t.status !== 'CLOSED');
-                const resolvedThisMonth = mine.filter(t => t.status === 'RESOLVED' && isSameMonth(t.resolvedAt));
+                const mineRecent = [...openRecent.tickets, ...progressRecent.tickets]
+                    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 6);
 
                 document.getElementById('statUnassigned').textContent = unassignedRes.pagination.total;
-                document.getElementById('statAssigned').textContent = mineActive.length;
-                document.getElementById('statResolvedMonth').textContent = resolvedThisMonth.length;
+                document.getElementById('statAssigned').textContent = openRes.pagination.total + progressRes.pagination.total;
+                document.getElementById('statResolvedMonth').textContent = resolvedMonthRes.pagination.total;
 
                 unassignedBody.innerHTML = unassigned.length ? unassigned.map(t => `
                     <tr class="clickable-row" data-open-unassigned="${escapeHtml(t.id)}">
@@ -317,7 +327,6 @@
                     </tr>
                 `).join('') : '<tr class="empty-row"><td colspan="3">No unassigned tickets right now.</td></tr>';
 
-                const mineRecent = mineActive.slice(0, 6);
                 assignedBody.innerHTML = mineRecent.length ? mineRecent.map(t => `
                     <tr class="clickable-row" data-open-assigned="${escapeHtml(t.id)}">
                         <td>#${escapeHtml(t.id)}</td>
@@ -331,13 +340,29 @@
             }
         }
 
-        // ---- Open Tickets tab (full unassigned pool) ----
+        // ---- Ticket lists use server-side pagination and filters ----
+        let openPage = 1;
+        let queuePage = 1;
+        let resolvedPage = 1;
+        const LIST_PAGE_SIZE = 20;
+
+        function wirePager(prefix, getPage, setPage, reload) {
+            document.getElementById(prefix + 'Prev').addEventListener('click', () => {
+                if (getPage() > 1) { setPage(getPage() - 1); reload(); }
+            });
+            document.getElementById(prefix + 'Next').addEventListener('click', () => {
+                setPage(getPage() + 1); reload();
+            });
+        }
+
         async function loadOpenTickets() {
             const tbody = document.getElementById('openBody');
             tbody.innerHTML = '<tr class="empty-row"><td colspan="5">Loading...</td></tr>';
             try {
                 const priority = document.getElementById('openPriorityFilter').value;
-                const { tickets } = await getTickets({ unassigned: 1, per_page: 100, priority });
+                const q = document.getElementById('openSearch').value.trim();
+                const result = await getTickets({ unassigned: 1, page: openPage, per_page: LIST_PAGE_SIZE, priority, q });
+                const { tickets, pagination } = result;
                 tickets.forEach(ticket => unassignedTicketCache.set(String(ticket.id), ticket));
                 tbody.innerHTML = tickets.length ? tickets.map(t => `
                     <tr class="clickable-row" data-open-unassigned="${escapeHtml(t.id)}">
@@ -346,21 +371,22 @@
                         <td>${escapeHtml(t.category?.name ?? '—')}</td>
                         <td><span class="priority-badge ${prioritySlug(t.priority)}">${priorityLabel(t.priority)}</span></td>
                         <td>${escapeHtml(t.timeAgo || '')}</td>
-                    </tr>
-                `).join('') : '<tr class="empty-row"><td colspan="5">No unassigned tickets match this filter.</td></tr>';
-            } catch (err) {
-                tbody.innerHTML = `<tr class="empty-row"><td colspan="5">${escapeHtml(err.message)}</td></tr>`;
-            }
+                    </tr>`).join('') : '<tr class="empty-row"><td colspan="5">No unassigned tickets match this filter.</td></tr>';
+                document.getElementById('openPageInfo').textContent = `Page ${pagination.page} of ${pagination.totalPages || 1} (${pagination.total} total)`;
+                document.getElementById('openPrev').disabled = pagination.page <= 1;
+                document.getElementById('openNext').disabled = pagination.page >= pagination.totalPages;
+            } catch (err) { tbody.innerHTML = `<tr class="empty-row"><td colspan="5">${escapeHtml(err.message)}</td></tr>`; }
         }
-        document.getElementById('openPriorityFilter').addEventListener('change', loadOpenTickets);
+        document.getElementById('openPriorityFilter').addEventListener('change', () => { openPage = 1; loadOpenTickets(); });
+        document.getElementById('openSearch').addEventListener('input', debounce(() => { openPage = 1; loadOpenTickets(); }, 300));
 
-        // ---- My Queue tab (full assigned-to-me list) ----
         async function loadQueue() {
             const tbody = document.getElementById('queueBody');
             tbody.innerHTML = '<tr class="empty-row"><td colspan="5">Loading...</td></tr>';
             try {
                 const status = document.getElementById('queueStatusFilter').value;
-                const { tickets } = await getTickets({ per_page: 100, status });
+                const q = document.getElementById('queueSearch').value.trim();
+                const { tickets, pagination } = await getTickets({ page: queuePage, per_page: LIST_PAGE_SIZE, status, q });
                 tbody.innerHTML = tickets.length ? tickets.map(t => `
                     <tr class="clickable-row" data-open-assigned="${escapeHtml(t.id)}">
                         <td>#${escapeHtml(t.id)}</td>
@@ -368,36 +394,39 @@
                         <td><span class="priority-badge ${prioritySlug(t.priority)}">${priorityLabel(t.priority)}</span></td>
                         <td><span class="status-badge ${statusSlug(t.status)}">${statusLabel(t.status)}</span></td>
                         <td>${escapeHtml(t.timeAgo || '')}</td>
-                    </tr>
-                `).join('') : '<tr class="empty-row"><td colspan="5">Nothing here yet.</td></tr>';
-            } catch (err) {
-                tbody.innerHTML = `<tr class="empty-row"><td colspan="5">${escapeHtml(err.message)}</td></tr>`;
-            }
+                    </tr>`).join('') : '<tr class="empty-row"><td colspan="5">Nothing here yet.</td></tr>';
+                document.getElementById('queuePageInfo').textContent = `Page ${pagination.page} of ${pagination.totalPages || 1} (${pagination.total} total)`;
+                document.getElementById('queuePrev').disabled = pagination.page <= 1;
+                document.getElementById('queueNext').disabled = pagination.page >= pagination.totalPages;
+            } catch (err) { tbody.innerHTML = `<tr class="empty-row"><td colspan="5">${escapeHtml(err.message)}</td></tr>`; }
         }
-        document.getElementById('queueStatusFilter').addEventListener('change', loadQueue);
+        document.getElementById('queueStatusFilter').addEventListener('change', () => { queuePage = 1; loadQueue(); });
+        document.getElementById('queueSearch').addEventListener('input', debounce(() => { queuePage = 1; loadQueue(); }, 300));
 
         async function loadResolvedTickets() {
             const tbody = document.getElementById('resolvedBody');
             tbody.innerHTML = '<tr class="empty-row"><td colspan="4">Loading...</td></tr>';
             try {
-                const firstPage = await getTickets({ per_page: 100, page: 1, status: 'RESOLVED' });
-                const tickets = firstPage.tickets.filter(ticket => ticket.status === 'RESOLVED');
-                const totalPages = Math.ceil((firstPage.pagination?.total ?? firstPage.tickets.length) / 100);
-                for (let page = 2; page <= totalPages; page += 1) {
-                    const result = await getTickets({ per_page: 100, page, status: 'RESOLVED' });
-                    tickets.push(...result.tickets.filter(ticket => ticket.status === 'RESOLVED'));
-                }
+                const { tickets, pagination } = await getTickets({ page: resolvedPage, per_page: LIST_PAGE_SIZE, status: 'RESOLVED' });
                 tbody.innerHTML = tickets.length ? tickets.map(ticket => `
                     <tr class="clickable-row" data-open-assigned="${escapeHtml(ticket.id)}">
                         <td>#${escapeHtml(ticket.id)}</td>
                         <td><div class="ticket-subject-cell">${renderTicketAttachment(ticket.attachmentUrl, 'thumbnail', ticket.attachmentThumbnailUrl)}<span>${escapeHtml(ticket.subject)}</span></div></td>
                         <td><span class="priority-badge ${prioritySlug(ticket.priority)}">${priorityLabel(ticket.priority)}</span></td>
                         <td>${escapeHtml(ticket.resolvedAt ? new Date(ticket.resolvedAt).toLocaleDateString() : '—')}</td>
-                    </tr>
-                `).join('') : '<tr class="empty-row"><td colspan="4">You have not resolved any tickets yet.</td></tr>';
-            } catch (err) {
-                tbody.innerHTML = `<tr class="empty-row"><td colspan="4">${escapeHtml(err.message)}</td></tr>`;
-            }
+                    </tr>`).join('') : '<tr class="empty-row"><td colspan="4">You have not resolved any tickets yet.</td></tr>';
+                document.getElementById('resolvedPageInfo').textContent = `Page ${pagination.page} of ${pagination.totalPages || 1} (${pagination.total} total)`;
+                document.getElementById('resolvedPrev').disabled = pagination.page <= 1;
+                document.getElementById('resolvedNext').disabled = pagination.page >= pagination.totalPages;
+            } catch (err) { tbody.innerHTML = `<tr class="empty-row"><td colspan="4">${escapeHtml(err.message)}</td></tr>`; }
+        }
+        wirePager('open', () => openPage, value => { openPage = value; }, loadOpenTickets);
+        wirePager('queue', () => queuePage, value => { queuePage = value; }, loadQueue);
+        wirePager('resolved', () => resolvedPage, value => { resolvedPage = value; }, loadResolvedTickets);
+
+        function debounce(callback, delay) {
+            let timer;
+            return (...args) => { clearTimeout(timer); timer = setTimeout(() => callback(...args), delay); };
         }
 
         async function loadProfile() {

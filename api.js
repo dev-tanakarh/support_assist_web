@@ -10,8 +10,9 @@
 // CORS error, not a 401/404. Easiest fix for local dev: serve these HTML files
 // with `php -S localhost:8080 -t public` too, or add CORS headers server-side.
 
-const API_BASE_URL = 'http://192.168.0.175:8080/api';
+const API_BASE_URL = 'http://192.168.18.10:8080/api';
 const BACKEND_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, '');
+
 
 const TOKEN_KEY = 'sa_accessToken';
 const REFRESH_KEY = 'sa_refreshToken';
@@ -49,9 +50,16 @@ export function updateStoredUser(patch) {
 }
 
 export function logout() {
+    // Local logout remains synchronous; call revokeSession() first when a network
+    // round-trip is appropriate (e.g. an explicit user-initiated sign-out).
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(REFRESH_KEY);
     localStorage.removeItem(USER_KEY);
+}
+
+export async function revokeSession() {
+    try { await request('/logout', { method: 'POST', _retry: false }); }
+    finally { logout(); }
 }
 
 // ---------- error type ----------
@@ -150,7 +158,9 @@ export async function fetchTicketAttachment(attachmentUrl) {
         const headers = {};
         const token = sameBackend ? getAccessToken() : null;
         if (token) headers.Authorization = `Bearer ${token}`;
-        return fetch(url, { headers });
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        return fetch(url, { headers, signal: controller.signal }).finally(() => clearTimeout(timeoutId));
     };
 
     let response;
@@ -209,6 +219,8 @@ export function getTickets(params = {}) {
 
 export const getRecentTickets = (limit = 4) => request(`/tickets/recent?limit=${limit}`);
 export const getTicket = (id) => request(`/tickets/${id}`);
+export const getTicketMessages = (id) => request(`/tickets/${encodeURIComponent(id)}/messages`);
+export const postTicketMessage = (id, body, isInternal = false) => request(`/tickets/${encodeURIComponent(id)}/messages`, { method: 'POST', body: { body, isInternal } });
 
 export function createTicket(fields, file) {
     if (file) {

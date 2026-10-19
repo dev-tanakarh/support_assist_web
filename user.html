@@ -208,6 +208,7 @@
                         <thead><tr><th>ID</th><th>Subject</th><th>Priority</th><th>Status</th><th>Created</th></tr></thead>
                         <tbody id="myTicketsBody"><tr class="empty-row"><td colspan="5">Loading...</td></tr></tbody>
                     </table>
+                    <div class="table-header" style="justify-content:flex-end;gap:12px;"><span id="myTicketsPageInfo" class="muted">Page 1</span><button id="myTicketsPrev" class="btn btn-outline" disabled>Previous</button><button id="myTicketsNext" class="btn btn-outline" disabled>Next</button></div>
                 </div>
             </div>
 
@@ -239,7 +240,7 @@
 
     <script type="module">
         import {
-            isLoggedIn, getCurrentUser, logout, getProfile, getCategories,
+            isLoggedIn, getCurrentUser, logout, revokeSession, getProfile, getCategories,
             getTickets, getRecentTickets, createTicket, getAlerts, markAlertRead,
             reviewTicket, statusSlug, timeAgo, escapeHtml,
         } from './api.js';
@@ -254,9 +255,9 @@
             window.location.href = 'login.html';
         }
 
-        document.getElementById('logoutBtn').addEventListener('click', (e) => {
+        document.getElementById('logoutBtn').addEventListener('click', async (e) => {
             e.preventDefault();
-            logout();
+            try { await revokeSession(); } catch { logout(); }
             window.location.href = 'login.html';
         });
 
@@ -363,13 +364,21 @@
             const tbody = document.getElementById('recentTicketsBody');
             tbody.innerHTML = '<tr class="empty-row"><td colspan="3">Loading...</td></tr>';
             try {
-                const { tickets } = await getTickets({ per_page: 100, q: searchQuery });
-                document.getElementById('statTotal').textContent = tickets.length;
-                document.getElementById('statOpen').textContent = tickets.filter(t => t.status === 'OPEN').length;
-                document.getElementById('statProgress').textContent = tickets.filter(t => t.status === 'IN_PROGRESS').length;
-                document.getElementById('statResolved').textContent = tickets.filter(t => t.status === 'RESOLVED' || t.status === 'CLOSED').length;
+                const [allResult, openResult, progressResult, resolvedResult] = await Promise.all([
+                    getTickets({ page: 1, per_page: 1, q: searchQuery }),
+                    getTickets({ page: 1, per_page: 1, q: searchQuery, status: 'OPEN' }),
+                    getTickets({ page: 1, per_page: 1, q: searchQuery, status: 'IN_PROGRESS' }),
+                    Promise.all([
+                        getTickets({ page: 1, per_page: 1, q: searchQuery, status: 'RESOLVED' }),
+                        getTickets({ page: 1, per_page: 1, q: searchQuery, status: 'CLOSED' }),
+                    ]),
+                ]);
+                document.getElementById('statTotal').textContent = allResult.pagination.total;
+                document.getElementById('statOpen').textContent = openResult.pagination.total;
+                document.getElementById('statProgress').textContent = progressResult.pagination.total;
+                document.getElementById('statResolved').textContent = resolvedResult[0].pagination.total + resolvedResult[1].pagination.total;
 
-                const recent = searchQuery ? tickets.slice(0, 8) : await getRecentTickets(6);
+                const recent = searchQuery ? (await getTickets({ page: 1, per_page: 8, q: searchQuery })).tickets : await getRecentTickets(6);
                 tbody.innerHTML = recent.length ? recent.map(t => `
                     <tr class="clickable-row" data-open-ticket="${escapeHtml(t.id)}">
                         <td>#${escapeHtml(t.id)}</td>
@@ -386,12 +395,13 @@
         });
 
         // ---- My Tickets tab ----
+        let myTicketsPage = 1;
         async function loadMyTickets() {
             const tbody = document.getElementById('myTicketsBody');
             tbody.innerHTML = '<tr class="empty-row"><td colspan="5">Loading...</td></tr>';
             try {
                 const status = document.getElementById('myTicketsStatusFilter').value;
-                const { tickets } = await getTickets({ per_page: 100, status });
+                const { tickets, pagination } = await getTickets({ page: myTicketsPage, per_page: 20, status });
                 tbody.innerHTML = tickets.length ? tickets.map(t => `
                     <tr class="clickable-row" data-open-ticket="${escapeHtml(t.id)}">
                         <td>#${escapeHtml(t.id)}</td>
@@ -401,11 +411,16 @@
                         <td>${escapeHtml(t.timeAgo || '')}</td>
                     </tr>
                 `).join('') : '<tr class="empty-row"><td colspan="5">No tickets match this filter.</td></tr>';
+                document.getElementById('myTicketsPageInfo').textContent = `Page ${pagination.page} of ${pagination.totalPages || 1} (${pagination.total} total)`;
+                document.getElementById('myTicketsPrev').disabled = pagination.page <= 1;
+                document.getElementById('myTicketsNext').disabled = pagination.page >= pagination.totalPages;
             } catch (err) {
                 tbody.innerHTML = `<tr class="empty-row"><td colspan="5">${escapeHtml(err.message)}</td></tr>`;
             }
         }
-        document.getElementById('myTicketsStatusFilter').addEventListener('change', loadMyTickets);
+        document.getElementById('myTicketsStatusFilter').addEventListener('change', () => { myTicketsPage = 1; loadMyTickets(); });
+        document.getElementById('myTicketsPrev').addEventListener('click', () => { if (myTicketsPage > 1) { myTicketsPage--; loadMyTickets(); } });
+        document.getElementById('myTicketsNext').addEventListener('click', () => { myTicketsPage++; loadMyTickets(); });
 
         // Delegate ticket-row clicks across both tables.
         document.addEventListener('click', (e) => {

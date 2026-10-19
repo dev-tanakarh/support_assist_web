@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b1120">
+    <meta name="description" content="Get the help you need, without the back-and-forth. Track support requests and stay in the loop with SupportAssist.">
+    <title>SupportAssist | Support, without the runaround</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg: #0b1120;
+            --panel: #10192b;
+            --panel-raised: #151e30;
+            --panel-soft: #1c273f;
+            --line: #26334d;
+            --ink: #f5f8ff;
+            --muted: #94a3b8;
+            --blue: #3b82f6;
+            --blue-bright: #62a0ff;
+            --green: #10b981;
+            --orange: #f59e0b;
+            --font-body: 'DM Sans', sans-serif;
+            --font-display: 'Space Grotesk', sans-serif;
+        }
+
+        * { box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            margin: 0;
+            min-width: 320px;
+            background-color: var(--bg);
+            background-image: radial-gradient(ellipse at 79% 16%, rgba(37, 99, 235, .14), transparent 36%),
+                linear-gradient(rgba(148, 163, 184, .025) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(148, 163, 184, .025) 1px, transparent 1px);
+            background-size: auto, 48px 48px, 48px 48px;
+            color: var(--ink);
+            font-family: var(--font-body);
+            -webkit-font-smoothing: antialiased;
+        }
+        a { color: inherit; text-decoration: none; }
+        button, a { -webkit-tap-highlight-color: transparent; }
+        .shell { width: min(1160px, calc(100% - 56px)); margin: 0 auto; }
+
+        .topbar {
+            height: 82px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(148, 163, 184, .12);
+        }
+        .brand { display: inline-flex; align-items: center; gap: 11px; font-family: var(--font-display); font-size: 19px; font-weight: 600; }
+        .brand-mark {
+            display: grid;
+            width: 36px;
+            height: 36px;
+            place-items: center;
+            color: white;
+            background: var(--blue);
+            border-radius: 10px;
+            box-shadow: 0 7px 20px rgba(59, 130, 246, .32);
+            font-size: 16px;
+        }
+        .nav-links { display: flex; align-items: center; gap: 34px; color: #b1bdce; font-size: 13px; font-weight: 500; }
+        .nav-links a:not(.nav-cta):hover { color: white; }
+        .nav-cta, .button-primary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            border: 1px solid rgba(255,255,255,.08);
+            color: white;
+            background: var(--blue);
+            font-weight: 600;
+            transition: background .2s ease, transform .2s ease, box-shadow .2s ease;
+        }
+        .nav-cta { min-height: 40px; padding: 0 17px; border-radius: 7px; font-size: 12px; }
+        .nav-cta:hover, .button-primary:hover { background: #2563eb; transform: translateY(-2px); box-shadow: 0 10px 24px rgba(37,99,235,.24); }
+
+        .hero {
+            min-height: 600px;
+            display: grid;
+            grid-template-columns: .91fr 1.09fr;
+            align-items: center;
+            gap: 46px;
+            padding: 63px 0 70px;
+        }
+        .hero-copy { position: relative; z-index: 1; animation: rise-in .7s both; }
+        .eyebrow { display: inline-flex; align-items: center; gap: 9px; color: #8bb9ff; font-size: 11px; font-weight: 700; letter-spacing: 1.1px; text-transform: uppercase; }
+        .eyebrow-dot { width: 7px; height: 7px; background: var(--green); border-radius: 50%; box-shadow: 0 0 12px rgba(16,185,129,.8); }
+        h1, h2, h3, p { margin-top: 0; }
+        h1 { max-width: 570px; margin: 23px 0 20px; font-family: var(--font-display); font-size: clamp(46px, 5.2vw, 68px); font-weight: 600; line-height: 1.04; letter-spacing: 0; }
+        h1 span { color: var(--blue-bright); }
+        .hero-copy > p { max-width: 440px; margin-bottom: 29px; color: #a7b4c8; font-size: 16px; line-height: 1.75; }
+        .hero-actions { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
+        .button-primary { min-height: 49px; padding: 0 20px; border-radius: 7px; font-size: 13px; }
+        .button-text { display: inline-flex; align-items: center; gap: 9px; color: #d7e0ef; font-size: 13px; font-weight: 600; }
+        .button-text i { color: var(--blue-bright); font-size: 11px; transition: transform .2s ease; }
+        .button-text:hover i { transform: translateX(4px); }
+        .hero-note { display: flex; align-items: center; gap: 8px; margin-top: 23px; color: #7f8da3; font-size: 11px; }
+        .hero-note i { color: var(--green); }
+
+        .product-scene { position: relative; min-width: 0; padding: 24px 0 34px 24px; animation: rise-in .8s .12s both; }
+        .scene-glow { position: absolute; inset: 9% 0 6% 9%; background: rgba(37,99,235,.27); filter: blur(74px); pointer-events: none; }
+        .dashboard {
+            position: relative;
+            overflow: hidden;
+            border: 1px solid #34415a;
+            border-radius: 11px;
+            background: #111a2b;
+            box-shadow: 0 35px 80px rgba(0,0,0,.48), 0 0 0 7px rgba(255,255,255,.018);
+            transform: perspective(1200px) rotateY(-5deg) rotateX(1deg);
+        }
+        .dash-top { height: 48px; display: flex; align-items: center; justify-content: space-between; padding: 0 17px; border-bottom: 1px solid var(--line); background: #121d30; }
+        .dash-brand { display: flex; align-items: center; gap: 8px; font-family: var(--font-display); font-size: 10px; font-weight: 600; }
+        .dash-brand i { color: var(--blue-bright); font-size: 12px; }
+        .dash-dots { display: flex; gap: 5px; }
+        .dash-dots span { width: 6px; height: 6px; border-radius: 50%; background: #34415a; }
+        .dash-body { padding: 20px; }
+        .dash-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 17px; }
+        .dash-heading h2 { margin-bottom: 4px; font-family: var(--font-display); font-size: 18px; font-weight: 600; }
+        .dash-heading p { margin-bottom: 0; color: var(--muted); font-size: 9px; }
+        .new-ticket { display: inline-flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 5px; background: var(--blue); color: white; font-size: 9px; font-weight: 600; white-space: nowrap; }
+        .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-bottom: 13px; }
+        .stat { padding: 12px; border: 1px solid var(--line); border-radius: 6px; background: rgba(21,30,48,.78); }
+        .stat-label { display: flex; align-items: center; justify-content: space-between; color: #9aa8bc; font-size: 8px; }
+        .stat-label i { font-size: 9px; }
+        .stat strong { display: block; margin-top: 7px; font-family: var(--font-display); font-size: 22px; font-weight: 600; }
+        .stat small { margin-left: 4px; color: var(--green); font-family: var(--font-body); font-size: 8px; font-weight: 600; }
+        .ticket-panel { overflow: hidden; border: 1px solid var(--line); border-radius: 6px; background: rgba(21,30,48,.58); }
+        .ticket-head { display: flex; justify-content: space-between; padding: 11px 12px; border-bottom: 1px solid var(--line); color: #e9eef7; font-size: 9px; font-weight: 600; }
+        .ticket-head span:last-child { color: var(--muted); font-size: 8px; font-weight: 400; }
+        .ticket-row { min-height: 45px; display: grid; grid-template-columns: 1.25fr 1.65fr .8fr; align-items: center; gap: 8px; padding: 7px 12px; border-bottom: 1px solid rgba(38,51,77,.72); font-size: 8px; }
+        .ticket-row:last-child { border-bottom: 0; }
+        .ticket-id { color: #75849a; }
+        .ticket-title { overflow: hidden; color: #dce4f1; text-overflow: ellipsis; white-space: nowrap; }
+        .status { justify-self: end; padding: 5px 7px; border-radius: 4px; font-size: 7px; font-weight: 700; white-space: nowrap; }
+        .status-open { color: #75aaff; background: rgba(59,130,246,.14); }
+        .status-progress { color: #ffc266; background: rgba(245,158,11,.13); }
+        .status-done { color: #59d6a8; background: rgba(16,185,129,.13); }
+        .activity-toast { position: absolute; right: -3px; bottom: 0; display: flex; align-items: center; gap: 11px; width: 210px; padding: 12px; border: 1px solid #34415a; border-radius: 8px; background: #182438; box-shadow: 0 14px 35px rgba(0,0,0,.3); animation: float-in 1s .45s both; }
+        .toast-icon { display: grid; width: 31px; height: 31px; flex: 0 0 31px; place-items: center; border-radius: 7px; color: #64d9af; background: rgba(16,185,129,.14); font-size: 12px; }
+        .activity-toast strong { display: block; margin-bottom: 3px; font-size: 9px; }
+        .activity-toast span { color: #93a2b7; font-size: 8px; }
+
+        .proof-strip { border-top: 1px solid rgba(148,163,184,.13); border-bottom: 1px solid rgba(148,163,184,.13); background: rgba(16,25,43,.72); }
+        .proof-inner { min-height: 102px; display: flex; align-items: center; justify-content: space-between; gap: 28px; }
+        .proof-lead { max-width: 185px; color: #aab7ca; font-size: 11px; line-height: 1.5; }
+        .proof-item { display: flex; align-items: center; gap: 11px; color: #e4ebf5; font-family: var(--font-display); font-size: 12px; font-weight: 500; white-space: nowrap; }
+        .proof-item i { color: var(--blue-bright); font-size: 14px; }
+        .proof-item:nth-of-type(3) i { color: var(--green); }
+        .proof-item:nth-of-type(4) i { color: var(--orange); }
+
+        .section { padding: 100px 0; }
+        .section-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 30px; margin-bottom: 35px; }
+        .section-kicker { margin-bottom: 12px; color: var(--blue-bright); font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; }
+        .section-head h2 { max-width: 520px; margin-bottom: 0; font-family: var(--font-display); font-size: 36px; font-weight: 600; line-height: 1.14; }
+        .section-head > p { max-width: 320px; margin-bottom: 2px; color: var(--muted); font-size: 13px; line-height: 1.7; }
+        .feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+        .feature { min-height: 198px; padding: 25px 24px 24px 0; }
+        .feature + .feature { padding-left: 24px; border-left: 1px solid var(--line); }
+        .feature-icon { display: grid; width: 37px; height: 37px; place-items: center; margin-bottom: 24px; border: 1px solid rgba(59,130,246,.25); border-radius: 8px; color: #7eb0ff; background: rgba(59,130,246,.1); font-size: 14px; }
+        .feature:nth-child(2) .feature-icon { color: #52d4a4; background: rgba(16,185,129,.09); border-color: rgba(16,185,129,.22); }
+        .feature:nth-child(3) .feature-icon { color: #ffc266; background: rgba(245,158,11,.09); border-color: rgba(245,158,11,.22); }
+        .feature h3 { margin-bottom: 8px; font-family: var(--font-display); font-size: 15px; font-weight: 600; }
+        .feature p { max-width: 290px; margin-bottom: 0; color: var(--muted); font-size: 12px; line-height: 1.7; }
+
+        .closing { position: relative; overflow: hidden; display: flex; align-items: center; justify-content: space-between; gap: 30px; margin-bottom: 68px; padding: 36px 40px; border: 1px solid #2b4267; border-radius: 9px; background: linear-gradient(105deg, #14233d 0%, #12213a 60%, #122b39 100%); }
+        .closing::after { position: absolute; top: -100px; right: 18%; width: 240px; height: 240px; border: 1px solid rgba(98,160,255,.13); border-radius: 50%; box-shadow: 0 0 0 28px rgba(98,160,255,.035), 0 0 0 58px rgba(98,160,255,.025); content: ''; pointer-events: none; }
+        .closing h2 { position: relative; z-index: 1; margin-bottom: 8px; font-family: var(--font-display); font-size: 24px; font-weight: 600; }
+        .closing p { position: relative; z-index: 1; margin-bottom: 0; color: #aab9cf; font-size: 12px; }
+        .closing .button-primary { position: relative; z-index: 1; flex: 0 0 auto; }
+        footer { min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 18px; border-top: 1px solid rgba(148,163,184,.13); color: #8290a5; font-size: 10px; }
+        .footer-brand { display: inline-flex; align-items: center; gap: 8px; color: #ced8e8; font-family: var(--font-display); font-size: 11px; font-weight: 600; }
+        .footer-brand i { color: var(--blue-bright); }
+        .footer-links { display: flex; gap: 20px; }
+        .footer-links a:hover { color: white; }
+        :focus-visible { outline: 2px solid #8bb9ff; outline-offset: 4px; }
+
+        @keyframes rise-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes float-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }
+        @media (max-width: 820px) {
+            .hero { min-height: auto; grid-template-columns: 1fr; gap: 16px; padding: 65px 0 58px; }
+            .hero-copy { max-width: 620px; }
+            .product-scene { width: min(100%, 620px); justify-self: center; padding-left: 0; }
+            .dashboard { transform: none; }
+            .activity-toast { right: -7px; }
+            .proof-inner { min-height: auto; display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; padding: 24px 0; }
+            .proof-lead { max-width: none; }
+            .section { padding: 76px 0; }
+        }
+        @media (max-width: 560px) {
+            .shell { width: min(100% - 36px, 1160px); }
+            .topbar { height: 68px; }
+            .brand { gap: 8px; font-size: 16px; }
+            .brand-mark { width: 32px; height: 32px; font-size: 14px; }
+            .nav-links { gap: 13px; }
+            .nav-links > a:not(.nav-cta) { display: none; }
+            .nav-cta { min-height: 37px; padding: 0 12px; font-size: 11px; }
+            .hero { padding: 54px 0 43px; }
+            h1 { max-width: 440px; margin: 18px 0 15px; font-size: 46px; }
+            .hero-copy > p { font-size: 14px; line-height: 1.7; }
+            .hero-actions { gap: 17px; }
+            .button-primary { min-height: 46px; padding: 0 15px; font-size: 12px; }
+            .product-scene { padding-top: 17px; padding-bottom: 30px; }
+            .dash-body { padding: 13px; }
+            .dash-top { height: 42px; padding: 0 12px; }
+            .stats { gap: 6px; }
+            .stat { padding: 9px 8px; }
+            .stat-label { font-size: 7px; }
+            .stat strong { font-size: 19px; }
+            .ticket-row { grid-template-columns: .95fr 1.55fr .82fr; gap: 5px; padding-right: 8px; padding-left: 8px; font-size: 7px; }
+            .activity-toast { right: -2px; width: 190px; padding: 9px; }
+            .proof-inner { gap: 17px 10px; }
+            .proof-lead { font-size: 10px; }
+            .proof-item { gap: 8px; font-size: 10px; white-space: normal; }
+            .section { padding: 64px 0; }
+            .section-head { display: block; margin-bottom: 24px; }
+            .section-head h2 { font-size: 30px; }
+            .section-head > p { margin-top: 13px; font-size: 12px; }
+            .feature-grid { grid-template-columns: 1fr; }
+            .feature { min-height: 0; display: grid; grid-template-columns: 40px 1fr; column-gap: 13px; padding: 20px 0; }
+            .feature + .feature { padding-left: 0; border-left: 0; border-top: 1px solid var(--line); }
+            .feature-icon { grid-row: span 2; margin: 0; }
+            .feature h3 { align-self: center; margin: 0 0 5px; }
+            .feature p { grid-column: 2; }
+            .closing { display: block; margin-bottom: 40px; padding: 26px 22px; }
+            .closing h2 { font-size: 21px; }
+            .closing p { max-width: 280px; line-height: 1.6; }
+            .closing .button-primary { margin-top: 19px; }
+            footer { min-height: 82px; flex-wrap: wrap; padding: 18px 0; }
+            .footer-links { gap: 13px; }
+        }
+    </style>
+</head>
+<body>
+    <header class="shell topbar">
+        <a class="brand" href="index.html" aria-label="SupportAssist home">
+            <span class="brand-mark"><i class="fa-solid fa-headset" aria-hidden="true"></i></span>
+            <span>SupportAssist</span>
+        </a>
+        <nav class="nav-links" aria-label="Main navigation">
+            <a href="#how-it-works">How it works</a>
+            <a href="#features">Features</a>
+            <a href="login.html">Sign in</a>
+            <a class="nav-cta" href="login.html">Get support <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+        </nav>
+    </header>
+
+    <main>
+        <section class="shell hero" aria-labelledby="hero-title">
+            <div class="hero-copy">
+                <div class="eyebrow"><span class="eyebrow-dot"></span> A better way to get help</div>
+                <h1 id="hero-title">Support that keeps things <span>moving.</span></h1>
+                <p>Tech hiccup? Something not working? Tell us what’s up and we’ll get the right person on it. No chasing, no guesswork.</p>
+                <div class="hero-actions">
+                    <a class="button-primary" href="login.html">Create a support ticket <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+                    <a class="button-text" href="#how-it-works">See how it works <i class="fa-solid fa-arrow-down" aria-hidden="true"></i></a>
+                </div>
+                <div class="hero-note"><i class="fa-solid fa-circle-check" aria-hidden="true"></i> One place for requests, updates, and answers.</div>
+            </div>
+
+            <div class="product-scene" aria-label="Preview of the SupportAssist ticket dashboard">
+                <div class="scene-glow" aria-hidden="true"></div>
+                <div class="dashboard">
+                    <div class="dash-top">
+                        <div class="dash-brand"><i class="fa-solid fa-headset" aria-hidden="true"></i> SupportAssist</div>
+                        <div class="dash-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+                    </div>
+                    <div class="dash-body">
+                        <div class="dash-heading">
+                            <div><h2>Your workspace</h2><p>A clear view of everything in progress.</p></div>
+                            <span class="new-ticket"><i class="fa-solid fa-plus" aria-hidden="true"></i> New ticket</span>
+                        </div>
+                        <div class="stats">
+                            <div class="stat"><div class="stat-label">Total tickets <i class="fa-solid fa-ticket" aria-hidden="true"></i></div><strong>12</strong></div>
+                            <div class="stat"><div class="stat-label">In progress <i class="fa-solid fa-spinner" aria-hidden="true"></i></div><strong>03<small>active</small></strong></div>
+                            <div class="stat"><div class="stat-label">Resolved <i class="fa-solid fa-check" aria-hidden="true"></i></div><strong>09</strong></div>
+                        </div>
+                        <div class="ticket-panel">
+                            <div class="ticket-head"><span>Recent requests</span><span>View all <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span></div>
+                            <div class="ticket-row"><span class="ticket-id">#SA-1048</span><span class="ticket-title">Laptop won’t connect to Wi-Fi</span><span class="status status-progress">In progress</span></div>
+                            <div class="ticket-row"><span class="ticket-id">#SA-1042</span><span class="ticket-title">Access to shared drive</span><span class="status status-open">Open</span></div>
+                            <div class="ticket-row"><span class="ticket-id">#SA-1036</span><span class="ticket-title">Printer setup in Room B204</span><span class="status status-done">Resolved</span></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="activity-toast"><span class="toast-icon"><i class="fa-solid fa-check" aria-hidden="true"></i></span><div><strong>Request resolved</strong><span>Your update is ready to view</span></div></div>
+            </div>
+        </section>
+
+        <section class="proof-strip" id="how-it-works" aria-label="How support works">
+            <div class="shell proof-inner">
+                <p class="proof-lead">A smoother support experience, from first message to fixed.</p>
+                <div class="proof-item"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i> Tell us what you need</div>
+                <div class="proof-item"><i class="fa-solid fa-user-gear" aria-hidden="true"></i> Get the right expert</div>
+                <div class="proof-item"><i class="fa-solid fa-bell" aria-hidden="true"></i> Follow every update</div>
+            </div>
+        </section>
+
+        <section class="shell section" id="features" aria-labelledby="features-title">
+            <div class="section-head">
+                <div><div class="section-kicker">Less friction, more fixing</div><h2 id="features-title">Help that doesn’t leave you guessing.</h2></div>
+                <p>From the first report to the final fix, your request and its progress stay easy to find.</p>
+            </div>
+            <div class="feature-grid">
+                <article class="feature">
+                    <span class="feature-icon"><i class="fa-solid fa-bolt" aria-hidden="true"></i></span>
+                    <h3>Get it to the right team</h3>
+                    <p>Share the details once. Your request lands with the people best equipped to help.</p>
+                </article>
+                <article class="feature">
+                    <span class="feature-icon"><i class="fa-solid fa-comments" aria-hidden="true"></i></span>
+                    <h3>Stay in the loop</h3>
+                    <p>Follow progress, see replies, and know what’s happening without sending a follow-up.</p>
+                </article>
+                <article class="feature">
+                    <span class="feature-icon"><i class="fa-solid fa-book-open" aria-hidden="true"></i></span>
+                    <h3>Find answers anytime</h3>
+                    <p>Browse practical help and common fixes from one easy-to-reach knowledge base.</p>
+                </article>
+            </div>
+        </section>
+
+        <section class="shell closing" aria-labelledby="closing-title">
+            <div><h2 id="closing-title">Let’s get that sorted.</h2><p>Sign in to follow a request or start a new one.</p></div>
+            <a class="button-primary" href="login.html">Open SupportAssist <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+        </section>
+    </main>
+
+    <footer class="shell">
+        <a class="footer-brand" href="index.html"><i class="fa-solid fa-headset" aria-hidden="true"></i> SupportAssist</a>
+        <span>Support, without the runaround.</span>
+        <nav class="footer-links" aria-label="Footer navigation"><a href="login.html">Sign in</a><a href="#features">Features</a></nav>
+    </footer>
+</body>
+</html>

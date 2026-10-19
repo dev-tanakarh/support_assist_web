@@ -265,7 +265,7 @@
 
     <script type="module">
         import {
-            isLoggedIn, getCurrentUser, logout, getDashboard, getRecentTickets, getTickets, getProfile,
+            isLoggedIn, getCurrentUser, logout, revokeSession, getDashboard, getRecentTickets, getTickets, getProfile,
             getUsers, createTechnician, deleteTechnician, assignTicket,
             statusSlug, prioritySlug, escapeHtml,
         } from './api.js';
@@ -280,9 +280,9 @@
             window.location.href = 'login.html';
         }
 
-        document.getElementById('logoutBtn').addEventListener('click', (e) => {
+        document.getElementById('logoutBtn').addEventListener('click', async (e) => {
             e.preventDefault();
-            logout();
+            try { await revokeSession(); } catch { logout(); }
             window.location.href = 'login.html';
         });
 
